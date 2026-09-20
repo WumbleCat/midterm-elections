@@ -5,14 +5,9 @@ blocker and the next concrete action.
 
 ## Critical
 
-1. **Census ACS demographics (`census-acs-profile`)** — state: connector + normalizer written
-   and fixture-tested (`normalize_acs`), never run live. Missing: a live pull to confirm
-   variable ids (B01001/B15003/B19013/B19083/B17001/B03002/B05002/B05003) and value ranges.
-   Blocker: `CENSUS_API_KEY` not configured. Next: request a key at
-   `https://api.census.gov/data/key_signup.html`, set it in `.env`, run
-   `electiondata ingest census-acs-profile -o years=2023`, compare PA `median_household_income`
-   and `pct_bachelors_or_higher` with data.census.gov, then backfill 2010–2023 and flip the
-   status to DONE.
+1. **Census ACS demographics (`census-acs-profile`)** — DONE 2026-09-20 (2010–2023 live pull,
+   676 rows). Remaining: ACS 5-year product (`-o survey=acs5`) for small-state stability and
+   congressional-district profiles for House modelling; both reuse the same connector.
 2. **Point-in-time campaign finance (`fec-committee-reports`)** — state: TODO. The bulk
    `weball` file is a post-hoc snapshot, so historical backtests have no finance features.
    Missing: connector for OpenFEC `/reports/{committee_type}/` (or `/candidate/{id}/totals/`

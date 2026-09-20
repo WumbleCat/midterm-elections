@@ -168,7 +168,11 @@ def test_urban_rural_parse(ctx):
 def test_acs_normalizer_from_format_fixture(ctx, fixtures_dir: Path):
     payload = json.load(open(fixtures_dir / "acs_format_fixture.json"))
     frame = census.parse_acs_json(payload)
-    out = census.normalize_acs([frame], 2023, "acs1")
+    # the API is called in 45-variable chunks that each repeat NAME/state; split the fixture the same way
+    cols = [c for c in frame.columns if c not in ("NAME", "state")]
+    chunks = [frame[["NAME", *cols[i : i + 45], "state"]] for i in range(0, len(cols), 45)]
+    assert len(chunks) >= 2
+    out = census.normalize_acs(chunks, 2023, "acs1")
     assert set(out["state"]) == {"PA", "DE"}
     row = out[out.state == "PA"].iloc[0]
     assert (
@@ -186,6 +190,21 @@ def test_acs_normalizer_from_format_fixture(ctx, fixtures_dir: Path):
     ]
     assert out[edu].notna().all().all()
     assert len(census.acs_variable_list()) == len(set(census.acs_variable_list()))
+
+
+def test_census_html_error_pages_are_domain_errors():
+    with pytest.raises(AuthenticationError, match="Invalid Key"):
+        census.check_census_response("<html><head><title>Invalid Key</title></head></html>", "u")
+    with pytest.raises(AuthenticationError, match="Missing Key"):
+        census.check_census_response("  <html><title>Missing Key</title>", "u")
+    with pytest.raises(SchemaChangeError):
+        census.check_census_response("<html><title>Maintenance</title>", "u")
+    with pytest.raises(DatasetUnavailableError):
+        census.check_census_response("", "u")
+    assert census.check_census_response('[["NAME","state"],["New York","36"]]')[1] == [
+        "New York",
+        "36",
+    ]
 
 
 def test_acs_requires_key(ctx):

@@ -270,7 +270,7 @@ REGISTRY: dict[str, SourceSpec] = {
             frequency="annual",
             geography="state",
             access_method=AccessMethod.API,
-            status=Status.BLOCKED,
+            status=Status.DONE,
             authoritative_url="https://api.census.gov/data.html",
             description="Detailed tables B01001, B01002, B15003, B19013, B19025/B11001, B19301, B19083, B17001, B03002, B05002, B05003 fetched from the Census API and reduced to one row per state-year.",
             normalized_table="demographics",
@@ -290,7 +290,7 @@ REGISTRY: dict[str, SourceSpec] = {
                 "B05002_*",
                 "B05003_*",
             ),
-            known_limitations="The Census API now rejects keyless requests ('Missing Key'); set CENSUS_API_KEY. Connector is fixture-tested but has not run live. 2020 1-year estimates were not released (experimental only).",
+            known_limitations="Requires CENSUS_API_KEY (the API answers HTTP 200 'Missing Key'/'Invalid Key' HTML pages otherwise; a new key is invalid until activated). Verified live 2026-09-20 for 2010-2023 (all variable ids checked against the API metadata); 2020 1-year estimates were not released (experimental only). pct_non_citizen is derived as foreign born minus naturalized because the direct row id changed in 2013.",
             update_frequency="Annual, mid-September (1-year).",
             tested=True,
             options={

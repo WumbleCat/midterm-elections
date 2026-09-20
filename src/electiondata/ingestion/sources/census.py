@@ -4,12 +4,18 @@ from __future__ import annotations
 
 import datetime as dt
 import json
+import re
 import zipfile
 from pathlib import Path
 
 import pandas as pd
 
-from ...exceptions import ParserError, SchemaChangeError
+from ...exceptions import (
+    AuthenticationError,
+    DatasetUnavailableError,
+    ParserError,
+    SchemaChangeError,
+)
 from ...geo import FIFTY_STATES_DC, add_state_columns
 from ...quality import release_calendar
 from ..base import Connector, IngestContext, RawArtifact
@@ -312,7 +318,7 @@ ACS_VARIABLES: dict[str, list[str]] = {
     "_native_born": ["B05002_002E"],
     "_foreign_born": ["B05002_013E"],
     "_naturalized": ["B05002_014E"],
-    "_non_citizen": ["B05002_021E"],
+    # non-citizen = foreign born - naturalized (the direct row is _015E before 2013, _021E after)
     "citizen_voting_age_population": ["B05003_009E", "B05003_011E", "B05003_020E", "B05003_022E"],
 }
 
@@ -326,6 +332,33 @@ def acs_variable_list() -> list[str]:
     return seen
 
 
+def check_census_response(text: str, url: str = "") -> list:
+    """Decode a Census API body, turning its HTML error pages into domain errors.
+
+    The API answers HTTP 200 with an HTML page titled "Missing Key" / "Invalid Key"
+    (a freshly issued key is invalid until its activation link is clicked).
+    """
+    stripped = text.lstrip()
+    if stripped.startswith("<"):
+        title = re.search(r"<title>(.*?)</title>", text, re.IGNORECASE | re.DOTALL)
+        reason = title.group(1).strip() if title else "HTML page"
+        if re.search(r"invalid key|missing key", reason, re.IGNORECASE):
+            raise AuthenticationError(
+                f"Census API rejected the request: {reason}. Check CENSUS_API_KEY and that the key "
+                "has been activated via the link in the Census sign-up email.",
+                url=url,
+            )
+        raise SchemaChangeError(f"Census API returned HTML instead of JSON ({reason}) for {url}")
+    if not stripped:
+        raise DatasetUnavailableError(
+            f"Census API returned an empty body for {url} (no data for this year/table?)"
+        )
+    try:
+        return json.loads(text)
+    except json.JSONDecodeError as exc:
+        raise ParserError(f"Census API body is not JSON for {url}: {text[:80]!r}") from exc
+
+
 def parse_acs_json(payload: list[list[str]]) -> pd.DataFrame:
     """Census API returns a header row followed by rows of strings."""
     if not payload or not isinstance(payload[0], list):
@@ -337,8 +370,8 @@ def normalize_acs(frames: list[pd.DataFrame], year: int, survey: str) -> pd.Data
     """Merge chunked API responses (same states) and compute schema shares."""
     merged = frames[0]
     for f in frames[1:]:
-        merged = merged.merge(f, on="state", suffixes=("", "_dup"))
-    merged = merged.loc[:, ~merged.columns.str.endswith("_dup")]
+        extra = f.drop(columns=[c for c in f.columns if c in merged.columns and c != "state"])
+        merged = merged.merge(extra, on="state", how="inner")
     wide = add_state_columns(merged.rename(columns={"state": "state_code"}), "state_code")
     wide = wide[wide["state"].notna()]
     values = {}
@@ -380,7 +413,7 @@ def normalize_acs(frames: list[pd.DataFrame], year: int, survey: str) -> pd.Data
             "pct_other_race": v["_other_nh"] / total,
             "pct_foreign_born": v["_foreign_born"] / v["_nativity_total"],
             "pct_naturalized_citizen": v["_naturalized"] / v["_nativity_total"],
-            "pct_non_citizen": v["_non_citizen"] / v["_nativity_total"],
+            "pct_non_citizen": (v["_foreign_born"] - v["_naturalized"]) / v["_nativity_total"],
             "pct_native_born": v["_native_born"] / v["_nativity_total"],
             "citizen_voting_age_population": v["citizen_voting_age_population"],
         }
@@ -441,6 +474,9 @@ class AcsProfileConnector(Connector):
                 url = f"{ACS_BASE}/{year}/acs/{survey}"
                 params = {"get": ",".join(["NAME", *chunk]), "for": "state:*", "key": key}
                 resp = ctx.http.get(url, params=params)
+                check_census_response(
+                    resp.text, f"{url}?get=...&for=state:*"
+                )  # fail before storing junk
                 art = ctx.write_bytes(
                     resp.content,
                     f"acs_{survey}_{year}_part{n}.json",
@@ -467,7 +503,9 @@ class AcsProfileConnector(Connector):
         frames = []
         for (year, survey), arts in sorted(groups.items()):
             parsed = [
-                parse_acs_json(json.loads(a.path.read_text(encoding="utf-8")))
+                parse_acs_json(
+                    check_census_response(a.path.read_text(encoding="utf-8"), a.path.name)
+                )
                 for a in sorted(arts, key=lambda a: a.path.name)
             ]
             frame = normalize_acs(parsed, year, survey)

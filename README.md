@@ -73,9 +73,9 @@ them as predictors.
 
 ## Data sources and status
 
-13 datasets are DONE with verified live pulls (MEDSL Senate/President, EAVS, PEP, Gazetteer,
-urban/rural, LAUS, CPI, CES, QCEW, FEC candidates/finance, NAEP); ACS and BEA connectors are
-implemented but BLOCKED on API keys; polls, Pew and MEDSL House use MANUAL file adapters; the
+14 datasets are DONE with verified live pulls (MEDSL Senate/President, EAVS, ACS, PEP, Gazetteer,
+urban/rural, LAUS, CPI, CES, QCEW, FEC candidates/finance, NAEP); BEA connectors are
+implemented but BLOCKED on an API key; polls, Pew and MEDSL House use MANUAL file adapters; the
 rest are TODO/DEFERRED with documented next steps. The authoritative matrix is
 [docs/STATUS.md](docs/STATUS.md) (generated from the registry + manifest) and the plan is
 [docs/ROADMAP.md](docs/ROADMAP.md).
@@ -120,7 +120,7 @@ where the `electiondata` API replaces the fixtures. See `frontend/README.md`.
 ## Development
 
 ```bash
-uv run pytest tests/unit                       # 109 offline tests
+uv run pytest tests/unit                       # 110 offline tests
 uv run pytest tests/integration --run-integration   # live endpoints (needs network; keys for ACS/BEA)
 uv run ruff check src tests && uv run ruff format src tests
 uv run electiondata docs                       # regenerate STATUS / DATA_MODEL / DATA_SOURCES blocks

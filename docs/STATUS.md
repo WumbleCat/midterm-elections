@@ -5,8 +5,8 @@ from the registry and the ingestion manifest with `electiondata status --write-d
 
 ```
 Last reviewed:        2026-09-20
-Package test status:  109 unit tests pass (pytest tests/unit); 9 live integration tests pass,
-                      2 skipped for missing CENSUS_API_KEY / BEA_API_KEY (pytest --run-integration)
+Package test status:  110 unit tests pass (pytest tests/unit); 9 live integration tests pass,
+                      1 skipped for missing BEA_API_KEY (ACS verified live 2026-09-20) (pytest --run-integration)
 Known broken sources: none among DONE datasets (see the "last error" column below)
 Data store:           data/ on the author's machine; raw+processed are git-ignored, the manifest is versioned
 ```
@@ -17,13 +17,13 @@ run; **MANUAL** adapter for hand-downloaded files (documented template); **TODO*
 implemented; **DEFERRED** intentionally postponed.
 
 <!-- BEGIN GENERATED:status -->
-_Generated 2026-09-20 18:40 from the source registry and `data/manifests/ingestion_runs.parquet`. Do not edit inside the markers; run `electiondata status --write-docs`._
+_Generated 2026-09-20 21:48 from the source registry and `data/manifests/ingestion_runs.parquet`. Do not edit inside the markers; run `electiondata status --write-docs`._
 
 ```
-DONE: 13
+DONE: 14
 PARTIAL: 0
 TODO: 6
-BLOCKED: 4
+BLOCKED: 3
 MANUAL: 5
 DEFERRED: 1
 ```
@@ -35,7 +35,7 @@ DEFERRED: 1
 | 1 | MEDSL | `medsl-house` | `election_results` | MANUAL | yes | - |  | - | Guestbook-gated download (API returns 'You may not download this file without the required Guestbook response'). Parser is fixture-tested on the documented 1976-2024 layout; vote 'mode' rows are collapsed (TOTAL preferred, otherwise summed) and runoff rows are excluded. |
 | 1 | MEDSL | `medsl-president` | `election_results` | DONE | yes | 2026-09-20 | 4,737 | 2026-09-20 (success) | Some states report fusion/ballot-line splits; votes are summed per candidate and party assigned from the largest line. |
 | 1 | MEDSL | `medsl-senate` | `election_results` | DONE | yes | 2026-09-20 | 3,743 | 2026-09-20 (success) | General-election stage only; Louisiana jungle primaries and runoffs follow MEDSL conventions. Dataset versions replace earlier ones (revision_vintage = Dataverse version). |
-| 2 | Census | `census-acs-profile` | `demographics` | BLOCKED | yes | - |  | - | The Census API now rejects keyless requests ('Missing Key'); set CENSUS_API_KEY. Connector is fixture-tested but has not run live. 2020 1-year estimates were not released (experimental only). |
+| 2 | Census | `census-acs-profile` | `demographics` | DONE | yes | 2026-09-20 | 676 | 2026-09-20 (success) | Requires CENSUS_API_KEY (the API answers HTTP 200 'Missing Key'/'Invalid Key' HTML pages otherwise; a new key is invalid until activated). Verified live 2026-09-20 for 2010-2023 (all variable ids checked against the API metadata); 2020 1-year estimates were not released (experimental only). pct_non_citizen is derived as foreign born minus naturalized because the direct row id changed in 2013. |
 | 2 | Census | `census-gazetteer` | `geography` | DONE | yes | 2026-09-20 | 208 | 2026-09-20 (success) |  |
 | 2 | Census | `census-migration-flows` | `migration_flows` | TODO | no | - |  | - | Excel layout has merged multi-row headers and MOE columns interleaved; parser not written. Net domestic migration is already available from census-pep-population. |
 | 2 | Census | `census-pep-population` | `population` | DONE | yes | 2026-09-20 | 2,902 | 2026-09-20 (success) | Each vintage revises earlier years; all vintages are kept and distinguished by revision_vintage. The intercensal 2000-2010 file has no migration components in the same layout (population only). |
@@ -69,7 +69,8 @@ DEFERRED: 1
   FEC official spreadsheets are a TODO parser.
 * **Phase 2 (demographics):** PEP population + components for vintages 2009, 2015–2019,
   2021–2024 (2,902 state-years), Gazetteer land area (2012/2016/2020/2024), 2020 urban/rural.
-  ACS is implemented and fixture-tested but blocked on `CENSUS_API_KEY`.
+  ACS 1-year profiles 2010–2023 (676 state-years, 52 geographies) verified live once
+  `CENSUS_API_KEY` was configured; variable ids validated against the API metadata.
 * **Phase 3 (economics):** LAUS 1976–2026 via bulk file (30,957 state-months), CPI and
   CES/CPS national via API (1996–2026), QCEW 2023–2024 (10,177 rows). BEA connectors are
   blocked on `BEA_API_KEY`.

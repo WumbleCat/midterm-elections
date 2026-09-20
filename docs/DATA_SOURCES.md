@@ -81,7 +81,7 @@ _Generated 2026-09-20 from the source registry. Hand-written notes live outside 
 ### U.S. Census Bureau — American Community Survey — ACS 1-year state profile (age, sex, education, income, inequality, poverty, race/ethnicity, citizenship)
 
 * **Dataset id:** `census-acs-profile` (phase 2)
-* **Status:** BLOCKED — tested with fixtures
+* **Status:** DONE — tested with fixtures
 * **Authoritative URL:** https://api.census.gov/data.html
 * **Access method:** api
 * **Credentials:** CENSUS_API_KEY
@@ -91,7 +91,7 @@ _Generated 2026-09-20 from the source registry. Hand-written notes live outside 
 * **Variables:** `B01003_001E`, `B01002_001E`, `B01001_*`, `B15003_*`, `B19013_001E`, `B19301_001E`, `B19083_001E`, `B17001_*`, `B03002_*`, `B05002_*`, `B05003_*`
 * **Ingest options:** `years`: comma-separated ACS years (default: 2010-latest); `survey`: acs1 (default) or acs5
 * **Description:** Detailed tables B01001, B01002, B15003, B19013, B19025/B11001, B19301, B19083, B17001, B03002, B05002, B05003 fetched from the Census API and reduced to one row per state-year.
-* **Known limitations:** The Census API now rejects keyless requests ('Missing Key'); set CENSUS_API_KEY. Connector is fixture-tested but has not run live. 2020 1-year estimates were not released (experimental only).
+* **Known limitations:** Requires CENSUS_API_KEY (the API answers HTTP 200 'Missing Key'/'Invalid Key' HTML pages otherwise; a new key is invalid until activated). Verified live 2026-09-20 for 2010-2023 (all variable ids checked against the API metadata); 2020 1-year estimates were not released (experimental only). pct_non_citizen is derived as foreign born minus naturalized because the direct row id changed in 2013.
 
 ### U.S. Census Bureau — Gazetteer files — State land and water area
 
