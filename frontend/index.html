@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Election Explorer</title>
+<link rel="stylesheet" href="ds/industry.css">
+<link rel="stylesheet" href="app.css">
+<script src="https://cdn.jsdelivr.net/npm/d3@7"></script>
+<script src="https://cdn.jsdelivr.net/npm/topojson-client@3"></script>
+</head>
+<body>
+<div class="app" data-screen-label="Election Explorer">
+
+  <header class="nav app-nav">
+    <div class="nav-brand app-brand">Election Data<span class="app-brand-sub">Explorer</span></div>
+    <nav class="app-links">
+      <a href="#" aria-current="page">Elections</a><a href="#" class="is-muted">States</a><a href="#" class="is-muted">Data</a><a href="#" class="is-muted">Model</a>
+    </nav>
+    <div class="search">
+      <input id="search" class="input search-input" type="search" autocomplete="off" placeholder="Search state · ⌘K" aria-label="Search state">
+      <div id="search-results" class="blueprint elev-md search-results" hidden></div>
+    </div>
+    <span id="source-tag" class="tag tag-outline source-tag">Fixture data</span>
+  </header>
+
+  <div class="toolbar">
+    <div id="office-seg" class="seg" role="tablist" aria-label="Office"></div>
+    <div class="year-block">
+      <span id="year" class="year">2024</span>
+      <span id="election-label" class="kicker"></span>
+    </div>
+    <div class="metric-block">
+      <span class="kicker">Map metric</span>
+      <div id="metric-seg" class="seg seg-compact" aria-label="Map metric"></div>
+    </div>
+    <div class="mode-block">
+      <div class="seg seg-compact">
+        <label class="seg-opt"><input type="radio" name="mode" checked readonly>Results</label>
+        <label class="seg-opt is-disabled" title="Forecast data not available yet"><input type="radio" name="mode" disabled>Forecast</label>
+      </div>
+      <label class="kicker asof">As of<input id="asof" class="input asof-input" type="date"></label>
+    </div>
+  </div>
+
+  <main class="main">
+    <section class="blueprint map-card">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div class="map-head">
+        <h6 id="map-title" class="muted-h6"></h6>
+        <span id="map-subtitle" class="map-subtitle"></span>
+      </div>
+      <div id="map" class="map">
+        <svg id="map-svg" viewBox="0 0 975 610" role="img" aria-label="Choropleth map of the United States">
+          <defs>
+            <pattern id="hatch" width="6" height="6" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width="6" height="6" fill="var(--color-neutral-100)"></rect><line x1="0" y1="0" x2="0" y2="6" stroke="var(--color-neutral-300)" stroke-width="1.5"></line></pattern>
+          </defs>
+          <g id="map-loading">
+            <rect x="60" y="40" width="855" height="520" fill="var(--color-neutral-200)" class="pulse"></rect>
+            <text x="487" y="310" text-anchor="middle" fill="var(--color-neutral-600)" class="loading-text">LOADING GEOGRAPHY</text>
+          </g>
+          <g id="map-g" class="map-g">
+            <g id="map-paths"></g>
+            <path id="map-sel" fill="none" stroke="var(--color-text)" stroke-linejoin="round" class="map-sel" hidden></path>
+            <g id="map-labels" class="map-labels"></g>
+          </g>
+        </svg>
+        <div id="tooltip" class="blueprint elev-md tooltip" hidden>
+          <div id="tip-name" class="tip-name"></div>
+          <div id="tip-rows"></div>
+          <div class="tip-foot">Click for full analysis →</div>
+        </div>
+      </div>
+      <div class="legend">
+        <div class="legend-scale">
+          <span id="legend-lo"></span>
+          <div id="legend-bar" class="legend-bar"></div>
+          <span id="legend-hi"></span>
+          <span id="legend-hatch" class="legend-hatch" hidden><svg width="14" height="10"><rect width="14" height="10" fill="url(#hatch)" stroke="var(--color-neutral-400)"></rect></svg>No race</span>
+        </div>
+        <span id="legend-note" class="legend-note"></span>
+      </div>
+    </section>
+
+    <aside id="panel" class="blueprint panel">
+      <i class="corner tl"></i><i class="corner tr"></i><i class="corner bl"></i><i class="corner br"></i>
+      <div id="panel-body"></div>
+    </aside>
+  </main>
+
+  <footer class="footer">
+    <div class="transport">
+      <button id="prev" class="btn btn-icon btn-sm" aria-label="Previous election"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m15 18-6-6 6-6"></path></svg></button>
+      <button id="play" class="btn btn-icon btn-sm" aria-label="Autoplay history" aria-pressed="false">
+        <svg class="icon-pause" width="14" height="14" viewBox="0 0 24 24" fill="currentColor" hidden><rect x="6" y="5" width="4" height="14"></rect><rect x="14" y="5" width="4" height="14"></rect></svg>
+        <svg class="icon-play" width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M7 5v14l11-7z"></path></svg>
+      </button>
+      <button id="next" class="btn btn-icon btn-sm" aria-label="Next election"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m9 18 6-6-6-6"></path></svg></button>
+    </div>
+    <div class="timeline-scroll">
+      <div id="timeline" class="timeline"></div>
+    </div>
+    <div class="timeline-key">
+      <span><span class="key-dot key-dot-pres"></span>Presidential</span>
+      <span><span class="key-dot key-dot-mid"></span>Midterm</span>
+      <span class="is-muted">← → keys</span>
+    </div>
+  </footer>
+</div>
+<script type="module" src="src/app.js"></script>
+</body>
+</html>

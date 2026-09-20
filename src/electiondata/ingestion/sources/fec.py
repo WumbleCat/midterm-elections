@@ -134,12 +134,16 @@ def normalize_candidate_master(df: pd.DataFrame, cycle: int, retrieval_date: dt.
     out["candidate_status"] = df["CAND_STATUS"].str.strip().str.upper().replace({"": None})
     out["principal_committee_id"] = df["CAND_PCC"].str.strip().replace({"": None})
     out = out[out["office"].notna() & out["candidate_id"].notna()]
-    # The bulk file is a rolling snapshot: what we know as of the download.
+    # The bulk file is a rolling snapshot. Candidate registrations (Form 2) are
+    # public as filed and general-election candidates have filed well before the
+    # primaries, so a row for cycle C is treated as available from mid-cycle
+    # (June 30 of C) or the retrieval date, whichever is earlier. Flagged as
+    # estimated; per-candidate first_file_date from the FEC API would be exact.
     out["observation_date"] = pd.Timestamp(retrieval_date)
     out["period_start"] = pd.Timestamp(cycle - 1, 1, 1)
     out["period_end"] = pd.Timestamp(cycle, 12, 31)
-    out["publication_date"] = pd.Timestamp(retrieval_date)
-    out["publication_date_estimated"] = False
+    out["publication_date"] = min(pd.Timestamp(retrieval_date), pd.Timestamp(cycle, 6, 30))
+    out["publication_date_estimated"] = True
     out["revision_vintage"] = retrieval_date.isoformat()
     return out.reset_index(drop=True)
 

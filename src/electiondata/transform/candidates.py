@@ -5,7 +5,7 @@ from __future__ import annotations
 import numpy as np
 import pandas as pd
 
-from ..quality.point_in_time import DateLike, filter_as_of
+from ..quality.point_in_time import DateLike, filter_as_of, to_date
 
 
 def _race_key(office: str) -> list[str]:
@@ -45,13 +45,25 @@ def finance_features(finance: pd.DataFrame, year: int, office: str, as_of: DateL
     """Race-level fundraising as of ``as_of``: top DEM and REP candidate totals (by receipts),
     dem_fundraising_share, log receipts, cash on hand and spending.
 
-    Only reports whose (estimated) publication_date <= as_of count. For historical
-    cycles ingested after the election the bulk summary is the FINAL report, so
-    these features are correctly null unless a pre-election snapshot exists.
+    Only snapshots retrieved on or before ``as_of`` are used (see the comment in the
+    body); within the snapshot only reports with publication_date <= as_of count.
+    For historical cycles ingested after the election these features are therefore
+    null unless a pre-election snapshot exists in the raw archive.
     """
     df = finance[(finance["office"] == office) & (finance["cycle"] == year)]
-    df = filter_as_of(df, as_of)
     key = _race_key(office)
+    # A financial-summary file is a snapshot of *all* candidates at retrieval time.
+    # Truncating a later snapshot to reports dated <= as_of would keep only candidates
+    # who stopped filing (drop-outs) and silently drop the nominees, so a snapshot is
+    # usable only if it was itself retrieved on or before as_of.
+    if not df.empty:
+        cutoff = pd.Timestamp(to_date(as_of))
+        snapshots = pd.to_datetime(df["retrieval_date"], errors="coerce")
+        df = df[snapshots <= cutoff]
+        if not df.empty:
+            latest_snapshot = snapshots[snapshots <= cutoff].max()
+            df = df[snapshots[snapshots <= cutoff].reindex(df.index) == latest_snapshot]
+    df = filter_as_of(df, as_of)
     cols = [*key, "dem_receipts", "rep_receipts", "dem_disbursements", "rep_disbursements", "dem_cash_on_hand", "rep_cash_on_hand", "dem_individual_contributions", "rep_individual_contributions", "dem_fundraising_share", "log_dem_receipts", "log_rep_receipts", "finance_coverage_end", "finance_dem_candidate_id", "finance_rep_candidate_id"]
     if df.empty:
         return pd.DataFrame(columns=cols)

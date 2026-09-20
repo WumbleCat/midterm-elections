@@ -17,11 +17,20 @@ from ..base import Connector, IngestContext, RawArtifact
 
 # ------------------------------------------------------------------ PEP
 
+_PEP = "https://www2.census.gov/programs-surveys/popest/datasets"
 PEP_FILES: dict[int, str] = {
-    # vintage -> URL (verified 2026-09-20)
-    2024: "https://www2.census.gov/programs-surveys/popest/datasets/2020-2024/state/totals/NST-EST2024-ALLDATA.csv",
-    2019: "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/national/totals/nst-est2019-alldata.csv",
-    2009: "https://www2.census.gov/programs-surveys/popest/datasets/2000-2010/intercensal/state/st-est00int-alldata.csv",
+    # vintage -> URL (all verified reachable 2026-09-20). Vintages 2011-2014 are not
+    # published as alldata CSVs at these paths; their years are covered by later vintages.
+    2024: f"{_PEP}/2020-2024/state/totals/NST-EST2024-ALLDATA.csv",
+    2023: f"{_PEP}/2020-2023/state/totals/NST-EST2023-ALLDATA.csv",
+    2022: f"{_PEP}/2020-2022/state/totals/NST-EST2022-ALLDATA.csv",
+    2021: f"{_PEP}/2020-2021/state/totals/NST-EST2021-alldata.csv",
+    2019: f"{_PEP}/2010-2019/national/totals/nst-est2019-alldata.csv",
+    2018: f"{_PEP}/2010-2018/national/totals/nst-est2018-alldata.csv",
+    2017: f"{_PEP}/2010-2017/national/totals/nst-est2017-alldata.csv",
+    2016: f"{_PEP}/2010-2016/national/totals/nst-est2016-alldata.csv",
+    2015: f"{_PEP}/2010-2015/national/totals/nst-est2015-alldata.csv",
+    2009: f"{_PEP}/2000-2010/intercensal/state/st-est00int-alldata.csv",
 }
 
 _PEP_MEASURES = {
@@ -110,8 +119,15 @@ class PepPopulationConnector(Connector):
 # ------------------------------------------------------------ Gazetteer
 
 
+GAZETTEER_DEFAULT_VINTAGES = (2012, 2016, 2020, 2024)
+
+
 def gazetteer_url(vintage: int) -> str:
-    return f"https://www2.census.gov/geo/docs/maps-data/data/gazetteer/{vintage}_Gazetteer/{vintage}_Gaz_state_national.zip"
+    """State file for 2024+; earlier vintages only publish county files (summed to states)."""
+    base = f"https://www2.census.gov/geo/docs/maps-data/data/gazetteer/{vintage}_Gazetteer"
+    if vintage >= 2024:
+        return f"{base}/{vintage}_Gaz_state_national.zip"
+    return f"{base}/{vintage}_Gaz_counties_national.zip"
 
 
 def normalize_gazetteer(df: pd.DataFrame, vintage: int) -> pd.DataFrame:
@@ -119,16 +135,21 @@ def normalize_gazetteer(df: pd.DataFrame, vintage: int) -> pd.DataFrame:
     need = {"USPS", "ALAND_SQMI", "AWATER_SQMI"}
     if not need <= set(df.columns):
         raise SchemaChangeError(f"Gazetteer file missing {sorted(need - set(df.columns))}")
-    out = add_state_columns(df, "USPS")
-    out = out[out["state"].notna()]
+    work = df[["USPS", "ALAND_SQMI", "AWATER_SQMI"]].copy()
+    work["ALAND_SQMI"] = pd.to_numeric(work["ALAND_SQMI"], errors="coerce")
+    work["AWATER_SQMI"] = pd.to_numeric(work["AWATER_SQMI"], errors="coerce")
+    work = add_state_columns(work, "USPS")
+    work = work[work["state"].notna()]
+    # county files -> sum to state; state files have one row per state already
+    agg = work.groupby(["state", "state_fips", "state_name"], as_index=False)[["ALAND_SQMI", "AWATER_SQMI"]].sum(min_count=1)
     out = pd.DataFrame(
         {
-            "state": out["state"],
-            "state_fips": out["state_fips"],
-            "state_name": out["state_name"],
+            "state": agg["state"],
+            "state_fips": agg["state_fips"],
+            "state_name": agg["state_name"],
             "year": vintage,
-            "land_area_sq_miles": pd.to_numeric(out["ALAND_SQMI"], errors="coerce"),
-            "water_area_sq_miles": pd.to_numeric(out["AWATER_SQMI"], errors="coerce"),
+            "land_area_sq_miles": agg["ALAND_SQMI"],
+            "water_area_sq_miles": agg["AWATER_SQMI"],
         }
     )
     out["observation_date"] = pd.Timestamp(vintage, 1, 1)
@@ -143,11 +164,21 @@ def normalize_gazetteer(df: pd.DataFrame, vintage: int) -> pd.DataFrame:
 class GazetteerConnector(Connector):
     dataset_id = "census-gazetteer"
 
+    def _vintages(self, ctx: IngestContext) -> list[int]:
+        v = ctx.option("vintages") or ctx.option("vintage")
+        if not v:
+            return list(GAZETTEER_DEFAULT_VINTAGES)
+        if isinstance(v, str):
+            return sorted(int(x) for x in v.split(",") if x.strip())
+        return sorted(int(x) for x in (v if isinstance(v, list | tuple) else [v]))
+
     def fetch(self, ctx: IngestContext) -> list[RawArtifact]:
-        vintage = int(ctx.option("vintage", 2024))
-        art = ctx.download(gazetteer_url(vintage), f"gazetteer_state_{vintage}.zip", note="Gazetteer state file")
-        art.extra = {"vintage": vintage}
-        return [art]
+        artifacts = []
+        for vintage in self._vintages(ctx):
+            art = ctx.download(gazetteer_url(vintage), f"gazetteer_{vintage}.zip", note=f"Gazetteer {vintage}")
+            art.extra = {"vintage": vintage}
+            artifacts.append(art)
+        return artifacts
 
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
         frames = []
@@ -155,7 +186,7 @@ class GazetteerConnector(Connector):
             vintage = art.extra.get("vintage") or int(art.path.stem.rsplit("_", 1)[-1])
             with zipfile.ZipFile(art.path) as zf:
                 name = next(n for n in zf.namelist() if n.endswith(".txt"))
-                raw = pd.read_csv(zf.open(name), sep="\t", dtype=str, encoding="latin-1")
+                raw = pd.read_csv(zf.open(name), sep="	", dtype=str, encoding="latin-1")
             frame = normalize_gazetteer(raw, int(vintage))
             frame["source_url"] = art.url or gazetteer_url(int(vintage))
             frames.append(frame)

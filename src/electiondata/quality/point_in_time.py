@@ -54,7 +54,7 @@ def filter_as_of(
       a warning is logged; if none exist and ``strict`` is True a
       :class:`PointInTimeError` is raised.
     """
-    if as_of is None:
+    if as_of is None or df.empty:
         return df
     cutoff = pd.Timestamp(to_date(as_of))
     col = publication_col

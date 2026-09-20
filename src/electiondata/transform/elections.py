@@ -177,15 +177,13 @@ def political_history(summary: pd.DataFrame, office: str) -> pd.DataFrame:
     races = summary[(summary["office"] == office) & (~summary["special"].fillna(False))][["state", "district", "year", "election_date"]].drop_duplicates()
     out = races.merge(prev, on=["state", "district", "year"], how="left")
     # most recent presidential lean strictly before the election year
-    lean_sorted = lean.sort_values("year")
-    out = out.sort_values("year")
-    merged = pd.merge_asof(
-        out.assign(_y=out["year"].astype("int64") - 1).sort_values("_y"),
-        lean_sorted.assign(_y=lean_sorted["year"].astype("int64"))[["state", "_y", "year", "state_partisan_lean", "pres_dem_two_party_share", "national_dem_two_party_share", "weighted_state_lean"]].rename(columns={"year": "lean_year"}).sort_values("_y"),
-        on="_y",
-        by="state",
-        direction="backward",
-    ).drop(columns=["_y"])
+    out["state"] = out["state"].astype("string")
+    lean_cols = lean[["state", "year", "state_partisan_lean", "pres_dem_two_party_share", "national_dem_two_party_share", "weighted_state_lean"]].rename(columns={"year": "lean_year"})
+    lean_cols["state"] = lean_cols["state"].astype("string")
+    m = out[["state", "district", "year"]].merge(lean_cols, on="state", how="left")
+    m = m[m["lean_year"] < m["year"]]
+    m = m.sort_values("lean_year").groupby(["state", "district", "year"], as_index=False).tail(1)
+    merged = out.merge(m, on=["state", "district", "year"], how="left")
     # rolling averages of the same office's previous results
     same = summary[(summary["office"] == office) & (~summary["special"].fillna(False))].sort_values(["state", "district", "year"])
     same["average_dem_share_last_2"] = same.groupby(["state", "district"])["dem_two_party_share"].transform(lambda s: s.shift(1).rolling(2, min_periods=1).mean())
