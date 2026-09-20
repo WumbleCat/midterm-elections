@@ -50,12 +50,16 @@ def parse_bea_payload(payload: dict) -> pd.DataFrame:
     return df
 
 
-def normalize_bea(df: pd.DataFrame, measure: str, table: str, line_code: str, pub_rule) -> pd.DataFrame:  # noqa: ANN001
+def normalize_bea(
+    df: pd.DataFrame, measure: str, table: str, line_code: str, pub_rule
+) -> pd.DataFrame:  # noqa: ANN001
     work = df.copy()
     work["state_fips_raw"] = work["GeoFips"].astype(str).str[:2]
     work = add_state_columns(work, "state_fips_raw")
     work = work[work["state"].notna()]
-    value = pd.to_numeric(work["DataValue"].astype(str).str.replace(",", "", regex=False), errors="coerce")
+    value = pd.to_numeric(
+        work["DataValue"].astype(str).str.replace(",", "", regex=False), errors="coerce"
+    )
     year = pd.to_numeric(work["TimePeriod"].astype(str).str[:4], errors="coerce").astype("Int64")
     out = pd.DataFrame(
         {
@@ -103,7 +107,7 @@ class _BeaConnector(Connector):
         return artifacts
 
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
-        lookup = {(t, l): m for m, t, l in self.requests}
+        lookup = {(table_, line_): m for m, table_, line_ in self.requests}
         frames = []
         for art in artifacts:
             if art.path.suffix != ".json":

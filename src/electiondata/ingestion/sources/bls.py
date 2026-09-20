@@ -70,12 +70,18 @@ class _BlsApiConnector(Connector):
                 payload: dict = {"seriesid": chunk, "startyear": str(y0), "endyear": str(y1)}
                 if key:
                     payload["registrationkey"] = key
-                resp = ctx.http.post_json(url, payload, headers={"Content-Type": "application/json"})
+                resp = ctx.http.post_json(
+                    url, payload, headers={"Content-Type": "application/json"}
+                )
                 body = resp.json()
                 status = body.get("status")
                 if status != "REQUEST_SUCCEEDED":
                     msg = "; ".join(body.get("message", [])) or status
-                    raise HTTPError(f"BLS API request not processed: {msg}", status_code=resp.status_code, url=url)
+                    raise HTTPError(
+                        f"BLS API request not processed: {msg}",
+                        status_code=resp.status_code,
+                        url=url,
+                    )
                 missing = [m for m in body.get("message", []) if "does not exist" in m]
                 if missing:
                     raise SchemaChangeError(f"BLS reports unknown series ids: {missing[:3]}")
@@ -85,7 +91,12 @@ class _BlsApiConnector(Connector):
                     json.dumps(body).encode(),
                     f"bls_{y0}_{y1}_part{n}.json",
                     url=url,
-                    params={"seriesid": ",".join(chunk), "startyear": y0, "endyear": y1, "registrationkey": key},
+                    params={
+                        "seriesid": ",".join(chunk),
+                        "startyear": y0,
+                        "endyear": y1,
+                        "registrationkey": key,
+                    },
                     http_status=resp.status_code,
                     note=f"BLS API {y0}-{y1} chunk {n}",
                 )
@@ -109,14 +120,18 @@ class _BlsApiConnector(Connector):
                             "year": int(obs["year"]),
                             "period": obs["period"],
                             "value": obs["value"],
-                            "footnotes": ";".join(f.get("text", "") for f in obs.get("footnotes", []) if f),
+                            "footnotes": ";".join(
+                                f.get("text", "") for f in obs.get("footnotes", []) if f
+                            ),
                             "source_url": art.url,
                         }
                     )
         if not rows:
             raise ParserError("BLS artifacts contained no series data")
         df = pd.DataFrame(rows)
-        df["date"] = [bls_period_to_date(y, p) for y, p in zip(df["year"], df["period"], strict=True)]
+        df["date"] = [
+            bls_period_to_date(y, p) for y, p in zip(df["year"], df["period"], strict=True)
+        ]
         df = df[df["date"].notna()].copy()
         df["date"] = pd.to_datetime(df["date"])
         df["value"] = pd.to_numeric(df["value"].replace("-", None), errors="coerce")
@@ -125,7 +140,12 @@ class _BlsApiConnector(Connector):
 
 # ----------------------------------------------------------------- LAUS
 
-LAUS_MEASURES = {"03": "unemployment_rate", "04": "unemployment", "05": "employment", "06": "labor_force"}
+LAUS_MEASURES = {
+    "03": "unemployment_rate",
+    "04": "unemployment",
+    "05": "employment",
+    "06": "labor_force",
+}
 
 
 def laus_series_id(state_fips: str, measure_code: str, seasonally_adjusted: bool = True) -> str:
@@ -144,7 +164,9 @@ def normalize_laus(series: pd.DataFrame) -> pd.DataFrame:
     parsed = series["series_id"].map(parse_laus_series_id)
     bad = parsed.isna()
     if bad.any():
-        raise SchemaChangeError(f"unexpected LAUS series ids: {series.loc[bad, 'series_id'].unique()[:5]}")
+        raise SchemaChangeError(
+            f"unexpected LAUS series ids: {series.loc[bad, 'series_id'].unique()[:5]}"
+        )
     series = series.copy()
     series["state_fips_raw"] = parsed.map(lambda t: t[0])
     series["measure"] = parsed.map(lambda t: LAUS_MEASURES.get(t[1]))
@@ -162,8 +184,12 @@ def normalize_laus(series: pd.DataFrame) -> pd.DataFrame:
             wide[m] = pd.NA
     wide["observation_date"] = wide["date"]
     wide["period_start"] = wide["date"]
-    wide["period_end"] = wide["date"].map(lambda d: pd.Timestamp(release_calendar.month_end(d.date())))
-    wide["publication_date"] = wide["date"].map(lambda d: pd.Timestamp(release_calendar.bls_laus_state(d.date())))
+    wide["period_end"] = wide["date"].map(
+        lambda d: pd.Timestamp(release_calendar.month_end(d.date()))
+    )
+    wide["publication_date"] = wide["date"].map(
+        lambda d: pd.Timestamp(release_calendar.bls_laus_state(d.date()))
+    )
     wide["publication_date_estimated"] = True
     return wide
 
@@ -209,12 +235,20 @@ class LausConnector(_BlsApiConnector):
         return start, end
 
     def series_ids(self, ctx: IngestContext) -> list[str]:
-        return [laus_series_id(STATE_BY_ABBR[s].fips, code) for s in FIFTY_STATES_DC for code in LAUS_MEASURES]
+        return [
+            laus_series_id(STATE_BY_ABBR[s].fips, code)
+            for s in FIFTY_STATES_DC
+            for code in LAUS_MEASURES
+        ]
 
     def fetch(self, ctx: IngestContext) -> list[RawArtifact]:
         if self._mode(ctx) == "api":
             return super().fetch(ctx)
-        art = ctx.download(LAUS_BULK_URL, "la.data.3.AllStatesS.tsv", note="LAUS all states, seasonally adjusted (bulk)")
+        art = ctx.download(
+            LAUS_BULK_URL,
+            "la.data.3.AllStatesS.tsv",
+            note="LAUS all states, seasonally adjusted (bulk)",
+        )
         return [art]
 
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
@@ -259,10 +293,27 @@ def normalize_national(series: pd.DataFrame, rule) -> pd.DataFrame:  # noqa: ANN
     out["unit"] = out["series_id"].map(lambda s: NATIONAL_SERIES[s][2])
     out["observation_date"] = out["date"]
     out["period_start"] = out["date"]
-    out["period_end"] = out["date"].map(lambda d: pd.Timestamp(release_calendar.month_end(d.date())))
+    out["period_end"] = out["date"].map(
+        lambda d: pd.Timestamp(release_calendar.month_end(d.date()))
+    )
     out["publication_date"] = out["date"].map(lambda d: pd.Timestamp(rule(d.date())))
     out["publication_date_estimated"] = True
-    return out[["date", "series_id", "measure", "value", "seasonally_adjusted", "unit", "observation_date", "period_start", "period_end", "publication_date", "publication_date_estimated", "source_url"]]
+    return out[
+        [
+            "date",
+            "series_id",
+            "measure",
+            "value",
+            "seasonally_adjusted",
+            "unit",
+            "observation_date",
+            "period_start",
+            "period_end",
+            "publication_date",
+            "publication_date_estimated",
+            "source_url",
+        ]
+    ]
 
 
 class CpiConnector(_BlsApiConnector):
@@ -284,7 +335,9 @@ class CesNationalConnector(_BlsApiConnector):
         return [s for s in NATIONAL_SERIES if s.startswith(("CES", "LNS"))]
 
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
-        out = normalize_national(self.read_series(artifacts), release_calendar.bls_employment_situation)
+        out = normalize_national(
+            self.read_series(artifacts), release_calendar.bls_employment_situation
+        )
         out["revision_vintage"] = ctx.retrieval_date.isoformat()
         return out
 
@@ -300,7 +353,14 @@ def qcew_area_url(year: int, state_fips: str) -> str:
 
 
 def normalize_qcew(df: pd.DataFrame, year: int) -> pd.DataFrame:
-    need = {"area_fips", "own_code", "industry_code", "agglvl_code", "annual_avg_emplvl", "total_annual_wages"}
+    need = {
+        "area_fips",
+        "own_code",
+        "industry_code",
+        "agglvl_code",
+        "annual_avg_emplvl",
+        "total_annual_wages",
+    }
     if not need <= set(df.columns):
         raise SchemaChangeError(f"QCEW file missing {sorted(need - set(df.columns))}")
     sub = df[df["agglvl_code"].isin(QCEW_STATE_AGGLVL)].copy()
@@ -324,7 +384,13 @@ def normalize_qcew(df: pd.DataFrame, year: int) -> pd.DataFrame:
     )
     if "disclosure_code" in sub.columns:
         suppressed = sub["disclosure_code"].astype(str).str.strip().eq("N")
-        for c in ("annual_avg_establishments", "annual_avg_employment", "total_annual_wages", "annual_avg_weekly_wage", "avg_annual_pay"):
+        for c in (
+            "annual_avg_establishments",
+            "annual_avg_employment",
+            "total_annual_wages",
+            "annual_avg_weekly_wage",
+            "avg_annual_pay",
+        ):
             out.loc[suppressed.values, c] = pd.NA
     out["observation_date"] = pd.Timestamp(year, 12, 31)
     out["period_start"] = pd.Timestamp(year, 1, 1)
@@ -353,7 +419,11 @@ class QcewConnector(Connector):
             for st in FIFTY_STATES_DC:
                 fips = STATE_BY_ABBR[st].fips
                 try:
-                    art = ctx.download(qcew_area_url(year, fips), f"qcew_{year}_{fips}.csv", note=f"QCEW annual {year} {st}")
+                    art = ctx.download(
+                        qcew_area_url(year, fips),
+                        f"qcew_{year}_{fips}.csv",
+                        note=f"QCEW annual {year} {st}",
+                    )
                 except DatasetUnavailableError:
                     ctx.note(f"QCEW {year} not yet available for {st}; skipping year")
                     break

@@ -44,7 +44,9 @@ def race_summary(results: pd.DataFrame) -> pd.DataFrame:
         ingestion_run_id=("ingestion_run_id", "first"),
     ).reset_index()
 
-    party_votes = df.pivot_table(index=RACE_KEY, columns="party", values="votes", aggfunc="sum", fill_value=0.0)
+    party_votes = df.pivot_table(
+        index=RACE_KEY, columns="party", values="votes", aggfunc="sum", fill_value=0.0
+    )
     for p in ("DEM", "REP"):
         if p not in party_votes.columns:
             party_votes[p] = 0.0
@@ -63,13 +65,19 @@ def race_summary(results: pd.DataFrame) -> pd.DataFrame:
         .groupby([*RACE_KEY, "party"], dropna=False)
         .head(1)[[*RACE_KEY, "party", "candidate", "votes"]]
     )
-    dem_top = top[top["party"] == "DEM"].rename(columns={"candidate": "dem_candidate"})[[*RACE_KEY, "dem_candidate"]]
-    rep_top = top[top["party"] == "REP"].rename(columns={"candidate": "rep_candidate"})[[*RACE_KEY, "rep_candidate"]]
+    dem_top = top[top["party"] == "DEM"].rename(columns={"candidate": "dem_candidate"})[
+        [*RACE_KEY, "dem_candidate"]
+    ]
+    rep_top = top[top["party"] == "REP"].rename(columns={"candidate": "rep_candidate"})[
+        [*RACE_KEY, "rep_candidate"]
+    ]
     out = out.merge(dem_top, on=RACE_KEY, how="left").merge(rep_top, on=RACE_KEY, how="left")
 
     # winner: candidate (not party sum) with the most votes; margin over runner-up
     ranked = df.sort_values("votes", ascending=False).groupby(RACE_KEY, dropna=False)
-    first = ranked.head(1)[[*RACE_KEY, "party", "votes"]].rename(columns={"party": "winner_party", "votes": "_v1"})
+    first = ranked.head(1)[[*RACE_KEY, "party", "votes"]].rename(
+        columns={"party": "winner_party", "votes": "_v1"}
+    )
     second = ranked.nth(1)[[*RACE_KEY, "votes"]].rename(columns={"votes": "_v2"})
     out = out.merge(first, on=RACE_KEY, how="left").merge(second, on=RACE_KEY, how="left")
 
@@ -102,7 +110,9 @@ def derived_metrics(summary: pd.DataFrame) -> pd.DataFrame:
 
 def national_two_party_share(pres_summary: pd.DataFrame) -> pd.DataFrame:
     """National Democratic two-party share per presidential year (sum of state votes)."""
-    pres = pres_summary[(pres_summary["office"] == "president") & (~pres_summary["special"].fillna(False))]
+    pres = pres_summary[
+        (pres_summary["office"] == "president") & (~pres_summary["special"].fillna(False))
+    ]
     nat = pres.groupby("year", as_index=False)[["dem_votes", "rep_votes"]].sum()
     nat["national_dem_two_party_share"] = nat["dem_votes"] / (nat["dem_votes"] + nat["rep_votes"])
     return nat[["year", "national_dem_two_party_share"]]
@@ -114,12 +124,24 @@ def presidential_lean(pres_summary: pd.DataFrame) -> pd.DataFrame:
     Also returns a smoothed lean: 0.6*latest + 0.3*previous + 0.1*third-previous
     (falls back to the available terms, re-weighted).
     """
-    pres = pres_summary[(pres_summary["office"] == "president") & (~pres_summary["special"].fillna(False))].copy()
+    pres = pres_summary[
+        (pres_summary["office"] == "president") & (~pres_summary["special"].fillna(False))
+    ].copy()
     nat = national_two_party_share(pres_summary)
     pres = pres.merge(nat, on="year", how="left")
     pres["state_partisan_lean"] = pres["dem_two_party_share"] - pres["national_dem_two_party_share"]
     pres = pres.sort_values(["state", "year"])
-    lean = pres[["state", "year", "dem_two_party_share", "national_dem_two_party_share", "state_partisan_lean", "election_date", "publication_date"]].copy()
+    lean = pres[
+        [
+            "state",
+            "year",
+            "dem_two_party_share",
+            "national_dem_two_party_share",
+            "state_partisan_lean",
+            "election_date",
+            "publication_date",
+        ]
+    ].copy()
     lean = lean.rename(columns={"dem_two_party_share": "pres_dem_two_party_share"})
     grp = lean.groupby("state")["state_partisan_lean"]
     l1, l2, l3 = lean["state_partisan_lean"], grp.shift(1), grp.shift(2)
@@ -138,7 +160,15 @@ def previous_same_office(summary: pd.DataFrame, office: str) -> pd.DataFrame:
     """
     df = summary[(summary["office"] == office) & (~summary["special"].fillna(False))].copy()
     df = df.sort_values(["state", "district", "year"])
-    cols = ["dem_two_party_share", "dem_vote_share", "rep_vote_share", "dem_rep_margin", "winner_party", "total_candidate_votes", "year"]
+    cols = [
+        "dem_two_party_share",
+        "dem_vote_share",
+        "rep_vote_share",
+        "dem_rep_margin",
+        "winner_party",
+        "total_candidate_votes",
+        "year",
+    ]
     out_rows = []
     for (state, district), g in df.groupby(["state", "district"], sort=False):
         g = g.sort_values("year")
@@ -174,23 +204,51 @@ def political_history(summary: pd.DataFrame, office: str) -> pd.DataFrame:
     """
     prev = previous_same_office(summary, office)
     lean = presidential_lean(summary)
-    races = summary[(summary["office"] == office) & (~summary["special"].fillna(False))][["state", "district", "year", "election_date"]].drop_duplicates()
+    races = summary[(summary["office"] == office) & (~summary["special"].fillna(False))][
+        ["state", "district", "year", "election_date"]
+    ].drop_duplicates()
     out = races.merge(prev, on=["state", "district", "year"], how="left")
     # most recent presidential lean strictly before the election year
     out["state"] = out["state"].astype("string")
-    lean_cols = lean[["state", "year", "state_partisan_lean", "pres_dem_two_party_share", "national_dem_two_party_share", "weighted_state_lean"]].rename(columns={"year": "lean_year"})
+    lean_cols = lean[
+        [
+            "state",
+            "year",
+            "state_partisan_lean",
+            "pres_dem_two_party_share",
+            "national_dem_two_party_share",
+            "weighted_state_lean",
+        ]
+    ].rename(columns={"year": "lean_year"})
     lean_cols["state"] = lean_cols["state"].astype("string")
     m = out[["state", "district", "year"]].merge(lean_cols, on="state", how="left")
     m = m[m["lean_year"] < m["year"]]
     m = m.sort_values("lean_year").groupby(["state", "district", "year"], as_index=False).tail(1)
     merged = out.merge(m, on=["state", "district", "year"], how="left")
     # rolling averages of the same office's previous results
-    same = summary[(summary["office"] == office) & (~summary["special"].fillna(False))].sort_values(["state", "district", "year"])
-    same["average_dem_share_last_2"] = same.groupby(["state", "district"])["dem_two_party_share"].transform(lambda s: s.shift(1).rolling(2, min_periods=1).mean())
-    same["average_dem_share_last_3"] = same.groupby(["state", "district"])["dem_two_party_share"].transform(lambda s: s.shift(1).rolling(3, min_periods=1).mean())
-    same["previous_swing"] = same.groupby(["state", "district"])["dem_two_party_share"].transform(lambda s: s.shift(1) - s.shift(2))
+    same = summary[(summary["office"] == office) & (~summary["special"].fillna(False))].sort_values(
+        ["state", "district", "year"]
+    )
+    same["average_dem_share_last_2"] = same.groupby(["state", "district"])[
+        "dem_two_party_share"
+    ].transform(lambda s: s.shift(1).rolling(2, min_periods=1).mean())
+    same["average_dem_share_last_3"] = same.groupby(["state", "district"])[
+        "dem_two_party_share"
+    ].transform(lambda s: s.shift(1).rolling(3, min_periods=1).mean())
+    same["previous_swing"] = same.groupby(["state", "district"])["dem_two_party_share"].transform(
+        lambda s: s.shift(1) - s.shift(2)
+    )
     merged = merged.drop(columns=["previous_swing"], errors="ignore").merge(
-        same[["state", "district", "year", "average_dem_share_last_2", "average_dem_share_last_3", "previous_swing"]],
+        same[
+            [
+                "state",
+                "district",
+                "year",
+                "average_dem_share_last_2",
+                "average_dem_share_last_3",
+                "previous_swing",
+            ]
+        ],
         on=["state", "district", "year"],
         how="left",
     )

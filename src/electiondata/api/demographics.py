@@ -21,7 +21,12 @@ def state(
     """ACS state demographic profile (one row per state × year × survey)."""
     df = load("demographics")
     df = as_of_filter(df, as_of)
-    df = apply_filters(df, state=norm_states(state), year=list(year) if isinstance(year, list | tuple | set) else year, survey=survey)
+    df = apply_filters(
+        df,
+        state=norm_states(state),
+        year=list(year) if isinstance(year, list | tuple | set) else year,
+        survey=survey,
+    )
     return df.reset_index(drop=True)
 
 
@@ -37,11 +42,21 @@ def population(
     newest vintage covering each year is returned; pass ``vintage`` for one vintage."""
     df = load("population")
     df = as_of_filter(df, as_of)
-    df = apply_filters(df, state=norm_states(state), year=list(year) if isinstance(year, list | tuple | set) else year)
+    df = apply_filters(
+        df,
+        state=norm_states(state),
+        year=list(year) if isinstance(year, list | tuple | set) else year,
+    )
     if vintage is not None:
         df = df[df["revision_vintage"] == str(vintage)]
     elif latest_vintage_only and not df.empty:
-        df = df.assign(_v=pd.to_numeric(df["revision_vintage"], errors="coerce")).sort_values(["state", "year", "_v"]).groupby(["state", "year"], as_index=False).tail(1).drop(columns="_v")
+        df = (
+            df.assign(_v=pd.to_numeric(df["revision_vintage"], errors="coerce"))
+            .sort_values(["state", "year", "_v"])
+            .groupby(["state", "year"], as_index=False)
+            .tail(1)
+            .drop(columns="_v")
+        )
     return df.reset_index(drop=True)
 
 
@@ -50,9 +65,13 @@ def geography(state: str | Sequence[str] | None = None) -> pd.DataFrame:
     return apply_filters(load("geography"), state=norm_states(state)).reset_index(drop=True)
 
 
-def urban_rural(state: str | Sequence[str] | None = None, *, as_of: DateLike | None = None) -> pd.DataFrame:
+def urban_rural(
+    state: str | Sequence[str] | None = None, *, as_of: DateLike | None = None
+) -> pd.DataFrame:
     """Urban/rural population shares per state (decennial classification)."""
-    return apply_filters(as_of_filter(load("urban_rural"), as_of), state=norm_states(state)).reset_index(drop=True)
+    return apply_filters(
+        as_of_filter(load("urban_rural"), as_of), state=norm_states(state)
+    ).reset_index(drop=True)
 
 
 def snapshot(as_of: DateLike, state: str | Sequence[str] | None = None) -> pd.DataFrame:

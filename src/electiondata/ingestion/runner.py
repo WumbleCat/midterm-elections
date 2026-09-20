@@ -59,7 +59,9 @@ def _dedupe(df: pd.DataFrame, key: tuple[str, ...]) -> tuple[pd.DataFrame, int]:
     return out, before - len(out)
 
 
-def _add_provenance(df: pd.DataFrame, spec: SourceSpec, ctx: IngestContext, artifacts: list[RawArtifact]) -> pd.DataFrame:
+def _add_provenance(
+    df: pd.DataFrame, spec: SourceSpec, ctx: IngestContext, artifacts: list[RawArtifact]
+) -> pd.DataFrame:
     out = df.copy()
     out["source"] = spec.source
     out["dataset_id"] = spec.id
@@ -125,7 +127,9 @@ def ingest_dataset(
         manifest.append(record)
         result.status = "skipped"
         result.error = record.error
-        log.warning("ingest skipped", extra={"run_id": run_id, "dataset": spec.id, "reason": record.error})
+        log.warning(
+            "ingest skipped", extra={"run_id": run_id, "dataset": spec.id, "reason": record.error}
+        )
         return result
 
     if spec.requires_api_key and not settings.has_key(spec.requires_api_key):
@@ -135,7 +139,9 @@ def ingest_dataset(
         manifest.append(record)
         result.status = "failed"
         result.error = record.error
-        log.error("ingest blocked", extra={"run_id": run_id, "dataset": spec.id, "reason": record.error})
+        log.error(
+            "ingest blocked", extra={"run_id": run_id, "dataset": spec.id, "reason": record.error}
+        )
         return result
 
     own_http = http is None
@@ -163,11 +169,15 @@ def ingest_dataset(
             artifacts = connector.fetch(ctx)
         result.artifacts = artifacts
         record.artifacts = [a.to_dict() for a in artifacts]
-        record.request_params = {k: v for a in artifacts for k, v in a.to_dict()["params"].items()} if artifacts else {}
+        record.request_params = (
+            {k: v for a in artifacts for k, v in a.to_dict()["params"].items()} if artifacts else {}
+        )
         if artifacts:
             record.source_url = artifacts[0].url
             record.raw_path = str(ctx.raw_dir)
-            record.checksum = artifacts[0].sha256 if len(artifacts) == 1 else _combined_checksum(artifacts)
+            record.checksum = (
+                artifacts[0].sha256 if len(artifacts) == 1 else _combined_checksum(artifacts)
+            )
         # -------------------------------------------------------- staging
         staging = connector.staging_frame(artifacts, ctx)
         if staging is not None and not staging.empty:
@@ -183,7 +193,9 @@ def ingest_dataset(
         if dropped:
             ctx.note(f"dropped {dropped} duplicate rows on natural key {schema.key}")
         # ------------------------------------------------------- validate
-        report = validate_table(spec.normalized_table, normalized, dataset=spec.id, source=spec.source)
+        report = validate_table(
+            spec.normalized_table, normalized, dataset=spec.id, source=spec.source
+        )
         result.validation = report
         record.validation_errors = len(report.errors)
         record.validation_warnings = len(report.warnings)
@@ -192,10 +204,19 @@ def ingest_dataset(
             log.log(
                 40 if issue.severity == "error" else 30,
                 "validation issue",
-                extra={"run_id": run_id, "rule": issue.rule, "field": issue.field, "detail": issue.message},
+                extra={
+                    "run_id": run_id,
+                    "rule": issue.rule,
+                    "field": issue.field,
+                    "detail": issue.message,
+                },
             )
         previous = manifest.last_success(spec.id)
-        prev_rows = int(previous["row_count"]) if previous is not None and pd.notna(previous["row_count"]) else None
+        prev_rows = (
+            int(previous["row_count"])
+            if previous is not None and pd.notna(previous["row_count"])
+            else None
+        )
         warn = compare_row_counts(prev_rows, len(normalized))
         if warn:
             ctx.note(warn)
@@ -229,7 +250,9 @@ def ingest_dataset(
         record.error = f"{type(exc).__name__}: {exc}"
         result.status = "failed"
         result.error = record.error
-        log.error("ingest failed", extra={"run_id": run_id, "dataset": spec.id, "error": record.error})
+        log.error(
+            "ingest failed", extra={"run_id": run_id, "dataset": spec.id, "error": record.error}
+        )
     except Exception as exc:  # noqa: BLE001 - record unexpected failures too
         record.status = "failed"
         record.error = f"{type(exc).__name__}: {exc}"
@@ -298,7 +321,9 @@ def update_all(*, include_manual: bool = False, **kwargs: Any) -> list[IngestRes
         if s.status == Status.MANUAL and not include_manual:
             continue
         if s.requires_api_key and not settings.has_key(s.requires_api_key):
-            log.warning("skipping dataset: missing key", extra={"dataset": s.id, "key": s.requires_api_key})
+            log.warning(
+                "skipping dataset: missing key", extra={"dataset": s.id, "key": s.requires_api_key}
+            )
             continue
         ids.append(s.id)
     return ingest_many(ids, **kwargs)

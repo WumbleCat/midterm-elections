@@ -79,7 +79,11 @@ def normalize_medsl(df: pd.DataFrame, office: str, *, party_col: str) -> pd.Data
         out["district"] = df["district"].astype(str).str.strip().map(_format_district)
     else:
         out["district"] = "statewide"
-    stage = df["stage"].astype(str).str.strip().str.lower() if "stage" in df.columns else pd.Series("gen", index=df.index)
+    stage = (
+        df["stage"].astype(str).str.strip().str.lower()
+        if "stage" in df.columns
+        else pd.Series("gen", index=df.index)
+    )
     runoff = _bool(df["runoff"]) if "runoff" in df.columns else pd.Series(False, index=df.index)
     stage = stage.mask(runoff | stage.str.contains("runoff"), "runoff")
     stage = stage.replace({"gen": "general", "pre": "primary"})
@@ -93,7 +97,9 @@ def normalize_medsl(df: pd.DataFrame, office: str, *, party_col: str) -> pd.Data
     out["votes"] = pd.to_numeric(df["candidatevotes"], errors="coerce")
     out["total_votes"] = pd.to_numeric(df["totalvotes"], errors="coerce")
     out["unofficial"] = _bool(df["unofficial"]) if "unofficial" in df.columns else False
-    out["mode"] = df["mode"].astype(str).str.strip().str.upper() if "mode" in df.columns else "TOTAL"
+    out["mode"] = (
+        df["mode"].astype(str).str.strip().str.upper() if "mode" in df.columns else "TOTAL"
+    )
     out["revision_vintage"] = df["version"].astype(str) if "version" in df.columns else None
     out = out[out["year"].notna()]
     out = _collapse_modes(out)
@@ -192,7 +198,9 @@ class _DataverseConnector(Connector):
         )
         return [data, meta_art]
 
-    def staging_frame(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame | None:
+    def staging_frame(
+        self, artifacts: list[RawArtifact], ctx: IngestContext
+    ) -> pd.DataFrame | None:
         data = _data_artifact(artifacts, self.filename_prefix)
         return read_medsl_file(data.path)
 
@@ -254,9 +262,13 @@ class HouseResultsConnector(ManualFileConnector):
         for a in artifacts:
             if "house" in a.path.name.lower() and a.path.suffix.lower() in {".tab", ".csv", ".tsv"}:
                 return a
-        raise DatasetUnavailableError("no MEDSL house file (*.tab/*.csv) found in the manual directory")
+        raise DatasetUnavailableError(
+            "no MEDSL house file (*.tab/*.csv) found in the manual directory"
+        )
 
-    def staging_frame(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame | None:
+    def staging_frame(
+        self, artifacts: list[RawArtifact], ctx: IngestContext
+    ) -> pd.DataFrame | None:
         return read_medsl_file(self._data(artifacts).path)
 
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:

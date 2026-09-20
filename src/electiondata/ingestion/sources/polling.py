@@ -63,7 +63,19 @@ class ApprovalPollsConnector(ManualFileConnector):
 
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
         df = _read_manual_csvs(artifacts)
-        _require(df, {"poll_id", "pollster", "start_date", "end_date", "approve", "disapprove", "publication_date"}, "approval")
+        _require(
+            df,
+            {
+                "poll_id",
+                "pollster",
+                "start_date",
+                "end_date",
+                "approve",
+                "disapprove",
+                "publication_date",
+            },
+            "approval",
+        )
         out = pd.DataFrame({"poll_id": df["poll_id"], "pollster": df["pollster"]})
         out["president"] = df.get("president")
         out["sample_size"] = pd.to_numeric(df.get("sample_size"), errors="coerce")
@@ -83,7 +95,19 @@ class GenericBallotConnector(ManualFileConnector):
 
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
         df = _read_manual_csvs(artifacts)
-        _require(df, {"poll_id", "pollster", "start_date", "end_date", "generic_dem", "generic_rep", "publication_date"}, "generic ballot")
+        _require(
+            df,
+            {
+                "poll_id",
+                "pollster",
+                "start_date",
+                "end_date",
+                "generic_dem",
+                "generic_rep",
+                "publication_date",
+            },
+            "generic ballot",
+        )
         out = pd.DataFrame({"poll_id": df["poll_id"], "pollster": df["pollster"]})
         out["sample_size"] = pd.to_numeric(df.get("sample_size"), errors="coerce")
         out["population_type"] = df.get("population_type")
@@ -104,7 +128,22 @@ class RacePollsConnector(ManualFileConnector):
 
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
         df = _read_manual_csvs(artifacts)
-        _require(df, {"poll_id", "state", "office", "year", "pollster", "start_date", "end_date", "dem_pct", "rep_pct", "publication_date"}, "race polls")
+        _require(
+            df,
+            {
+                "poll_id",
+                "state",
+                "office",
+                "year",
+                "pollster",
+                "start_date",
+                "end_date",
+                "dem_pct",
+                "rep_pct",
+                "publication_date",
+            },
+            "race polls",
+        )
         st = add_state_columns(df, "state")
         out = pd.DataFrame(
             {

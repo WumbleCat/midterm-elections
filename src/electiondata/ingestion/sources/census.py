@@ -3,7 +3,6 @@
 from __future__ import annotations
 
 import datetime as dt
-import io
 import json
 import zipfile
 from pathlib import Path
@@ -73,9 +72,9 @@ def normalize_pep(df: pd.DataFrame, vintage: int) -> pd.DataFrame:
     states = states[states["state"].notna()]
     records = []
     for prefix, measure in _PEP_MEASURES.items():
-        cols = [c for c in states.columns if c.startswith(prefix) and c[len(prefix):].isdigit()]
+        cols = [c for c in states.columns if c.startswith(prefix) and c[len(prefix) :].isdigit()]
         for c in cols:
-            year = int(c[len(prefix):])
+            year = int(c[len(prefix) :])
             if measure == "population" and year == 2010 and vintage == 2009:
                 continue  # intercensal file's 2010 column duplicates the 2010-2019 vintage
             sub = states[["state", "state_fips", "state_name", c]].rename(columns={c: "value"})
@@ -84,7 +83,12 @@ def normalize_pep(df: pd.DataFrame, vintage: int) -> pd.DataFrame:
             records.append(sub)
     long = pd.concat(records, ignore_index=True)
     long["value"] = pd.to_numeric(long["value"], errors="coerce")
-    wide = long.pivot_table(index=["state", "state_fips", "state_name", "year"], columns="measure", values="value", aggfunc="first").reset_index()
+    wide = long.pivot_table(
+        index=["state", "state_fips", "state_name", "year"],
+        columns="measure",
+        values="value",
+        aggfunc="first",
+    ).reset_index()
     wide.columns.name = None
     wide["revision_vintage"] = str(vintage)
     wide["observation_date"] = wide["year"].map(lambda y: pd.Timestamp(int(y), 7, 1))
@@ -101,7 +105,9 @@ class PepPopulationConnector(Connector):
     def fetch(self, ctx: IngestContext) -> list[RawArtifact]:
         out = []
         for vintage, url in sorted(PEP_FILES.items()):
-            art = ctx.download(url, f"pep_vintage_{vintage}.csv", note=f"PEP state totals vintage {vintage}")
+            art = ctx.download(
+                url, f"pep_vintage_{vintage}.csv", note=f"PEP state totals vintage {vintage}"
+            )
             art.extra = {"vintage": vintage}
             out.append(art)
         return out
@@ -141,7 +147,9 @@ def normalize_gazetteer(df: pd.DataFrame, vintage: int) -> pd.DataFrame:
     work = add_state_columns(work, "USPS")
     work = work[work["state"].notna()]
     # county files -> sum to state; state files have one row per state already
-    agg = work.groupby(["state", "state_fips", "state_name"], as_index=False)[["ALAND_SQMI", "AWATER_SQMI"]].sum(min_count=1)
+    agg = work.groupby(["state", "state_fips", "state_name"], as_index=False)[
+        ["ALAND_SQMI", "AWATER_SQMI"]
+    ].sum(min_count=1)
     out = pd.DataFrame(
         {
             "state": agg["state"],
@@ -175,7 +183,9 @@ class GazetteerConnector(Connector):
     def fetch(self, ctx: IngestContext) -> list[RawArtifact]:
         artifacts = []
         for vintage in self._vintages(ctx):
-            art = ctx.download(gazetteer_url(vintage), f"gazetteer_{vintage}.zip", note=f"Gazetteer {vintage}")
+            art = ctx.download(
+                gazetteer_url(vintage), f"gazetteer_{vintage}.zip", note=f"Gazetteer {vintage}"
+            )
             art.extra = {"vintage": vintage}
             artifacts.append(art)
         return artifacts
@@ -206,8 +216,16 @@ def normalize_urban_rural_county(df: pd.DataFrame, census_year: int = 2020) -> p
     for c in ("POP_COU", "POP_URB", "POP_RUR"):
         work[c] = pd.to_numeric(work[c], errors="coerce")
     work = add_state_columns(work, "STATE")
-    agg = work.groupby(["state", "state_fips", "state_name"], as_index=False)[["POP_COU", "POP_URB", "POP_RUR"]].sum(min_count=1)
-    out = agg.rename(columns={"POP_COU": "total_population", "POP_URB": "urban_population", "POP_RUR": "rural_population"})
+    agg = work.groupby(["state", "state_fips", "state_name"], as_index=False)[
+        ["POP_COU", "POP_URB", "POP_RUR"]
+    ].sum(min_count=1)
+    out = agg.rename(
+        columns={
+            "POP_COU": "total_population",
+            "POP_URB": "urban_population",
+            "POP_RUR": "rural_population",
+        }
+    )
     out["pct_urban"] = out["urban_population"] / out["total_population"]
     out["pct_rural"] = out["rural_population"] / out["total_population"]
     out["year"] = census_year
@@ -224,7 +242,9 @@ class UrbanRuralConnector(Connector):
     dataset_id = "census-urban-rural"
 
     def fetch(self, ctx: IngestContext) -> list[RawArtifact]:
-        art = ctx.download(URBAN_RURAL_COUNTY_2020, "2020_UA_COUNTY.xlsx", note="2020 urban/rural by county")
+        art = ctx.download(
+            URBAN_RURAL_COUNTY_2020, "2020_UA_COUNTY.xlsx", note="2020 urban/rural by county"
+        )
         art.extra = {"census_year": 2020}
         return [art]
 
@@ -368,7 +388,14 @@ def normalize_acs(frames: list[pd.DataFrame], year: int, survey: str) -> pd.Data
     for k in _B01001_MALE_AGE:
         out[k] = v[k] / total
     out["pct_65_plus"] = out["pct_65_74"] + out["pct_75_plus"]
-    edu = ["pct_less_than_high_school", "pct_high_school", "pct_some_college", "pct_associate_degree", "pct_bachelors", "pct_graduate_degree"]
+    edu = [
+        "pct_less_than_high_school",
+        "pct_high_school",
+        "pct_some_college",
+        "pct_associate_degree",
+        "pct_bachelors",
+        "pct_graduate_degree",
+    ]
     for k in edu:
         out[k] = v[k] / v["_pop25"]
     out["pct_bachelors_or_higher"] = out["pct_bachelors"] + out["pct_graduate_degree"]
@@ -405,7 +432,9 @@ class AcsProfileConnector(Connector):
         key = ctx.require_key("CENSUS_API_KEY")
         survey = str(ctx.option("survey", "acs1"))
         variables = acs_variable_list()
-        chunks = [variables[i : i + self.chunk_size] for i in range(0, len(variables), self.chunk_size)]
+        chunks = [
+            variables[i : i + self.chunk_size] for i in range(0, len(variables), self.chunk_size)
+        ]
         artifacts = []
         for year in self._years(ctx, survey):
             for n, chunk in enumerate(chunks):
@@ -437,7 +466,10 @@ class AcsProfileConnector(Connector):
             groups.setdefault((int(year), str(survey)), []).append(art)
         frames = []
         for (year, survey), arts in sorted(groups.items()):
-            parsed = [parse_acs_json(json.loads(a.path.read_text(encoding="utf-8"))) for a in sorted(arts, key=lambda a: a.path.name)]
+            parsed = [
+                parse_acs_json(json.loads(a.path.read_text(encoding="utf-8")))
+                for a in sorted(arts, key=lambda a: a.path.name)
+            ]
             frame = normalize_acs(parsed, year, survey)
             frame["source_url"] = f"{ACS_BASE}/{year}/acs/{survey}"
             frames.append(frame)
@@ -447,4 +479,4 @@ class AcsProfileConnector(Connector):
 
 
 def _read_text(path: Path) -> str:
-    return io.open(path, encoding="utf-8").read()
+    return open(path, encoding="utf-8").read()

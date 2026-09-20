@@ -30,7 +30,13 @@ def results(
     """
     df = load("election_results")
     df = as_of_filter(df, as_of)
-    df = apply_filters(df, year=list(year) if isinstance(year, list | tuple | set) else year, office=norm_office(office), state=norm_states(state), district=district)
+    df = apply_filters(
+        df,
+        year=list(year) if isinstance(year, list | tuple | set) else year,
+        office=norm_office(office),
+        state=norm_states(state),
+        district=district,
+    )
     if not include_special:
         df = df[~df["special"].fillna(False)]
     if level == "candidate":
@@ -52,7 +58,11 @@ def turnout(
     """State-level registration, ballots cast and derived turnout rates (EAVS)."""
     df = load("turnout")
     df = as_of_filter(df, as_of)
-    df = apply_filters(df, year=list(year) if isinstance(year, list | tuple | set) else year, state=norm_states(state))
+    df = apply_filters(
+        df,
+        year=list(year) if isinstance(year, list | tuple | set) else year,
+        state=norm_states(state),
+    )
     if with_metrics and not df.empty:
         try:
             population = load("population")
@@ -62,7 +72,9 @@ def turnout(
     return df.reset_index(drop=True)
 
 
-def partisan_lean(state: str | Sequence[str] | None = None, *, as_of: DateLike | None = None) -> pd.DataFrame:
+def partisan_lean(
+    state: str | Sequence[str] | None = None, *, as_of: DateLike | None = None
+) -> pd.DataFrame:
     """state_partisan_lean per presidential year (state minus national two-party share)."""
     df = as_of_filter(load("election_results"), as_of)
     summary = elec_t.race_summary(df)
@@ -70,7 +82,9 @@ def partisan_lean(state: str | Sequence[str] | None = None, *, as_of: DateLike |
     return apply_filters(lean, state=norm_states(state)).reset_index(drop=True)
 
 
-def history(office: str, state: str | Sequence[str] | None = None, *, as_of: DateLike | None = None) -> pd.DataFrame:
+def history(
+    office: str, state: str | Sequence[str] | None = None, *, as_of: DateLike | None = None
+) -> pd.DataFrame:
     """Political-history features (previous share, margin, lean, rolling averages) per race."""
     df = as_of_filter(load("election_results"), as_of)
     summary = elec_t.race_summary(df)

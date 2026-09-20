@@ -120,7 +120,9 @@ class ManifestStore:
         combined = pd.concat([existing, row], ignore_index=True) if not existing.empty else row
         combined = _coerce(combined)
         write_parquet_atomic(combined, self.paths.manifest_file)
-        (self.paths.run_metadata_dir / f"{record.run_id}.json").write_text(record.to_json(), encoding="utf-8")
+        (self.paths.run_metadata_dir / f"{record.run_id}.json").write_text(
+            record.to_json(), encoding="utf-8"
+        )
 
     def runs(self, dataset: str | None = None, limit: int | None = None) -> pd.DataFrame:
         df = self.read()
@@ -150,7 +152,14 @@ class ManifestStore:
         df = self.read()
         if df.empty:
             return pd.DataFrame(
-                columns=["dataset", "last_status", "last_run", "last_success", "last_row_count", "last_error"]
+                columns=[
+                    "dataset",
+                    "last_status",
+                    "last_run",
+                    "last_success",
+                    "last_row_count",
+                    "last_error",
+                ]
             )
         df = df.sort_values("started_at")
         last = df.groupby("dataset").tail(1).set_index("dataset")
@@ -180,6 +189,13 @@ def _coerce(df: pd.DataFrame) -> pd.DataFrame:
     for col in ("row_count", "validation_errors", "validation_warnings"):
         out[col] = pd.to_numeric(out[col], errors="coerce").astype("Int64")
     for col in MANIFEST_COLUMNS:
-        if col not in ("started_at", "completed_at", "retrieval_date", "row_count", "validation_errors", "validation_warnings"):
+        if col not in (
+            "started_at",
+            "completed_at",
+            "retrieval_date",
+            "row_count",
+            "validation_errors",
+            "validation_warnings",
+        ):
             out[col] = out[col].astype("string")
     return out

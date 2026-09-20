@@ -78,7 +78,10 @@ def filter_as_of(
     out = df.loc[mask].copy()
     dropped = len(df) - len(out)
     if dropped:
-        log.debug("point-in-time filter dropped rows", extra={"dropped": dropped, "as_of": str(cutoff.date())})
+        log.debug(
+            "point-in-time filter dropped rows",
+            extra={"dropped": dropped, "as_of": str(cutoff.date())},
+        )
     return out
 
 

@@ -1,0 +1,4 @@
+poll_id,state,district,office,year,pollster,pollster_grade,sponsor,start_date,end_date,publication_date,sample_size,population_type,mode,dem_candidate,rep_candidate,dem_pct,rep_pct,other_pct,undecided_pct,source_url
+P1,PA,statewide,senate,2024,Example Poll Co,B,,2024-10-01,2024-10-04,2024-10-06,800,lv,online,Casey,McCormick,47,45,3,5,https://example.org/p1
+P2,PA,statewide,senate,2024,Another Poll,A-,,2024-10-08,2024-10-11,2024-10-12,1000,lv,phone,Casey,McCormick,0.48,0.46,0.02,0.04,https://example.org/p2
+P3,Ohio,statewide,senate,2024,Example Poll Co,B,,2024-10-08,2024-10-11,2024-10-20,900,rv,online,Brown,Moreno,46,47,2,5,

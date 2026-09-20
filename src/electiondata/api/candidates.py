@@ -54,4 +54,6 @@ def finance(
         return apply_filters(out, state=norm_states(state)).reset_index(drop=True)
     df = as_of_filter(df, as_of)
     df = apply_filters(df, cycle=year, state=norm_states(state), office=norm_office(office))
-    return df.sort_values(["cycle", "state", "total_receipts"], ascending=[True, True, False]).reset_index(drop=True)
+    return df.sort_values(
+        ["cycle", "state", "total_receipts"], ascending=[True, True, False]
+    ).reset_index(drop=True)

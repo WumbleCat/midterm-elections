@@ -140,7 +140,11 @@ class HttpClient:
                 if resp.status_code in _RETRY_STATUSES and attempt < attempts:
                     log.warning(
                         "http retryable status",
-                        extra={"url": redact_url(url), "status": resp.status_code, "attempt": attempt},
+                        extra={
+                            "url": redact_url(url),
+                            "status": resp.status_code,
+                            "attempt": attempt,
+                        },
                     )
                     self._backoff(attempt, resp.headers.get("Retry-After"))
                     continue
@@ -148,7 +152,9 @@ class HttpClient:
                 return resp
             if attempt < attempts:
                 self._backoff(attempt, None)
-        raise NetworkError(f"request to {redact_url(url)} failed after {attempts} attempts: {last_exc}")
+        raise NetworkError(
+            f"request to {redact_url(url)} failed after {attempts} attempts: {last_exc}"
+        )
 
     def get(self, url: str, **kwargs: Any) -> httpx.Response:
         return self.request("GET", url, **kwargs)
@@ -182,7 +188,11 @@ class HttpClient:
                     if resp.status_code in _RETRY_STATUSES and attempt < attempts:
                         log.warning(
                             "download retryable status",
-                            extra={"url": redact_url(url), "status": resp.status_code, "attempt": attempt},
+                            extra={
+                                "url": redact_url(url),
+                                "status": resp.status_code,
+                                "attempt": attempt,
+                            },
                         )
                         self._backoff(attempt, resp.headers.get("Retry-After"))
                         continue
@@ -213,7 +223,9 @@ class HttpClient:
             finally:
                 if tmp.exists():
                     tmp.unlink(missing_ok=True)
-        raise NetworkError(f"download of {redact_url(url)} failed after {attempts} attempts: {last_exc}")
+        raise NetworkError(
+            f"download of {redact_url(url)} failed after {attempts} attempts: {last_exc}"
+        )
 
     # --------------------------------------------------------------- helpers
     def _backoff(self, attempt: int, retry_after: str | None) -> None:
@@ -233,7 +245,9 @@ class HttpClient:
         safe = redact_url(url)
         if code in (401, 403):
             raise AuthenticationError(
-                f"authentication/authorization failed ({code}) for {safe}", status_code=code, url=safe
+                f"authentication/authorization failed ({code}) for {safe}",
+                status_code=code,
+                url=safe,
             )
         if code == 404:
             raise DatasetUnavailableError(f"resource not found (404): {safe}")

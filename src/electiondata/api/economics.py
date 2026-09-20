@@ -48,7 +48,11 @@ def industry(
     if shares:
         out = econ_t.industry_shares(df, as_of or "2999-12-31")
         return apply_filters(out, state=norm_states(state)).reset_index(drop=True)
-    df = apply_filters(df, state=norm_states(state), year=list(year) if isinstance(year, list | tuple | set) else year)
+    df = apply_filters(
+        df,
+        state=norm_states(state),
+        year=list(year) if isinstance(year, list | tuple | set) else year,
+    )
     return df.reset_index(drop=True)
 
 
@@ -61,7 +65,12 @@ def state_economy(
 ) -> pd.DataFrame:
     """BEA annual GDP / personal income / RPP (long format)."""
     df = as_of_filter(load("state_economy"), as_of)
-    df = apply_filters(df, state=norm_states(state), year=list(year) if isinstance(year, list | tuple | set) else year, measure=list(measure) if isinstance(measure, list | tuple | set) else measure)
+    df = apply_filters(
+        df,
+        state=norm_states(state),
+        year=list(year) if isinstance(year, list | tuple | set) else year,
+        measure=list(measure) if isinstance(measure, list | tuple | set) else measure,
+    )
     return df.reset_index(drop=True)
 
 
@@ -73,9 +82,16 @@ def national(
 ) -> pd.DataFrame:
     """Monthly national series (CPI, payrolls, earnings, unemployment, participation)."""
     df = as_of_filter(load("national_economy"), as_of)
-    df = apply_filters(df, measure=list(measure) if isinstance(measure, list | tuple | set) else measure)
+    df = apply_filters(
+        df, measure=list(measure) if isinstance(measure, list | tuple | set) else measure
+    )
     if wide:
-        w = df.pivot_table(index="date", columns=["measure", "seasonally_adjusted"], values="value", aggfunc="first")
+        w = df.pivot_table(
+            index="date",
+            columns=["measure", "seasonally_adjusted"],
+            values="value",
+            aggfunc="first",
+        )
         w.columns = [f"{m}_{'sa' if sa else 'nsa'}" for m, sa in w.columns]
         return w.reset_index()
     return df.sort_values(["measure", "date"]).reset_index(drop=True)

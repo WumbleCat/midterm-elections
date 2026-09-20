@@ -73,7 +73,11 @@ PROVENANCE_COLUMNS: tuple[Column, ...] = (
     Column("source", "string", "Short source id (MEDSL, BLS, ...).", nullable=False),
     Column("source_url", "string", "URL of the raw artifact (credentials redacted)."),
     Column("dataset_id", "string", "Registry dataset id that produced the row.", nullable=False),
-    Column("revision_vintage", "string", "Vintage/version of the upstream release (e.g. PEP vintage, MEDSL version)."),
+    Column(
+        "revision_vintage",
+        "string",
+        "Vintage/version of the upstream release (e.g. PEP vintage, MEDSL version).",
+    ),
     Column("ingestion_run_id", "string", "Manifest run id.", nullable=False),
 )
 
@@ -99,15 +103,35 @@ ELECTION_RESULTS = TableSchema(
         Column("year", "int64", "Election year.", nullable=False),
         Column("election_date", "date", "Date of the general election."),
         Column("office", "string", "president | senate | house.", nullable=False),
-        Column("district", "string", "'statewide' for president/senate; zero-padded district number for house.", nullable=False),
+        Column(
+            "district",
+            "string",
+            "'statewide' for president/senate; zero-padded district number for house.",
+            nullable=False,
+        ),
         Column("election_type", "string", "general | special | primary | runoff.", nullable=False),
         Column("special", "bool", "True for special elections.", nullable=False),
         Column("candidate", "string", "Candidate name as reported (upper case)."),
         Column("party_raw", "string", "Party label exactly as reported by the source."),
-        Column("party", "string", "Canonical party: DEM | REP | LIB | GRN | IND | OTHER.", nullable=False),
+        Column(
+            "party",
+            "string",
+            "Canonical party: DEM | REP | LIB | GRN | IND | OTHER.",
+            nullable=False,
+        ),
         Column("writein", "bool", "Write-in candidate flag."),
-        Column("votes", "float64", "Votes received by the candidate (summed over vote modes).", unit="votes"),
-        Column("total_votes", "float64", "Total votes cast in the race as reported by the source.", unit="votes"),
+        Column(
+            "votes",
+            "float64",
+            "Votes received by the candidate (summed over vote modes).",
+            unit="votes",
+        ),
+        Column(
+            "total_votes",
+            "float64",
+            "Total votes cast in the race as reported by the source.",
+            unit="votes",
+        ),
         Column("unofficial", "bool", "Source flagged the result as unofficial."),
     ),
 )
@@ -135,9 +159,19 @@ ELECTION_RACE_SUMMARY = TableSchema(
         _pct("other_vote_share", "other_votes / total_candidate_votes"),
         _pct("dem_two_party_share", "dem_votes / (dem_votes + rep_votes)"),
         _pct("rep_two_party_share", "rep_votes / (dem_votes + rep_votes)"),
-        Column("dem_rep_margin", "float64", "dem_two_party_share - rep_two_party_share", unit="share -1..1"),
+        Column(
+            "dem_rep_margin",
+            "float64",
+            "dem_two_party_share - rep_two_party_share",
+            unit="share -1..1",
+        ),
         Column("winner_party", "string", "Party of the candidate with the most votes."),
-        Column("winning_margin", "float64", "Winner share minus runner-up share (of candidate votes).", unit="share"),
+        Column(
+            "winning_margin",
+            "float64",
+            "Winner share minus runner-up share (of candidate votes).",
+            unit="share",
+        ),
         Column("dem_candidate", "string", "Top Democratic candidate."),
         Column("rep_candidate", "string", "Top Republican candidate."),
         Column("n_candidates", "int64", "Number of candidates with votes."),
@@ -153,23 +187,55 @@ TURNOUT = TableSchema(
     columns=_STATE_COLS
     + (
         Column("year", "int64", "Election year.", nullable=False),
-        Column("registered_voters", "float64", "Total registered voters (EAVS A1a).", unit="persons"),
-        Column("active_registered_voters", "float64", "Active registrations (A1b).", unit="persons"),
-        Column("inactive_registered_voters", "float64", "Inactive registrations (A1c).", unit="persons"),
-        Column("citizen_voting_age_population", "float64", "CVAP; null unless joined from ACS.", unit="persons"),
-        Column("voting_age_population", "float64", "VAP; null unless joined from PEP age tables.", unit="persons"),
-        Column("ballots_cast", "float64", "Total ballots counted / voters who participated (F1a).", unit="ballots"),
+        Column(
+            "registered_voters", "float64", "Total registered voters (EAVS A1a).", unit="persons"
+        ),
+        Column(
+            "active_registered_voters", "float64", "Active registrations (A1b).", unit="persons"
+        ),
+        Column(
+            "inactive_registered_voters", "float64", "Inactive registrations (A1c).", unit="persons"
+        ),
+        Column(
+            "citizen_voting_age_population",
+            "float64",
+            "CVAP; null unless joined from ACS.",
+            unit="persons",
+        ),
+        Column(
+            "voting_age_population",
+            "float64",
+            "VAP; null unless joined from PEP age tables.",
+            unit="persons",
+        ),
+        Column(
+            "ballots_cast",
+            "float64",
+            "Total ballots counted / voters who participated (F1a).",
+            unit="ballots",
+        ),
         Column("in_person_election_day_votes", "float64", "F1b", unit="ballots"),
         Column("early_votes", "float64", "In-person early votes (F1c).", unit="ballots"),
         Column("mail_votes", "float64", "Mail ballots counted (F1d).", unit="ballots"),
-        Column("provisional_votes", "float64", "Provisional ballots counted (F1e).", unit="ballots"),
+        Column(
+            "provisional_votes", "float64", "Provisional ballots counted (F1e).", unit="ballots"
+        ),
         Column("uocava_votes", "float64", "UOCAVA ballots counted (F1f).", unit="ballots"),
         Column("mail_ballots_transmitted", "float64", "Mail ballots sent (C1a).", unit="ballots"),
         Column("mail_ballots_returned", "float64", "Mail ballots returned (C1b).", unit="ballots"),
-        Column("mail_ballots_rejected", "float64", "Mail ballots rejected (C4a where present).", unit="ballots"),
+        Column(
+            "mail_ballots_rejected",
+            "float64",
+            "Mail ballots rejected (C4a where present).",
+            unit="ballots",
+        ),
         Column("provisional_ballots_submitted", "float64", "E1a", unit="ballots"),
         Column("n_jurisdictions", "int64", "Jurisdictions aggregated."),
-        Column("n_jurisdictions_missing_ballots", "int64", "Jurisdictions with no usable ballots_cast value."),
+        Column(
+            "n_jurisdictions_missing_ballots",
+            "int64",
+            "Jurisdictions with no usable ballots_cast value.",
+        ),
     ),
 )
 
@@ -207,7 +273,10 @@ DEMOGRAPHICS = TableSchema(
         Column("mean_household_income", "float64", "", unit="USD (current)"),
         Column("per_capita_income", "float64", "", unit="USD (current)"),
         Column("gini_coefficient", "float64", "", unit="0-1"),
-        _pct("poverty_rate", "Population below poverty level / population for whom poverty status is determined."),
+        _pct(
+            "poverty_rate",
+            "Population below poverty level / population for whom poverty status is determined.",
+        ),
         _pct("pct_white", ""),
         _pct("pct_white_non_hispanic", ""),
         _pct("pct_black", ""),
@@ -221,7 +290,9 @@ DEMOGRAPHICS = TableSchema(
         _pct("pct_naturalized_citizen", ""),
         _pct("pct_non_citizen", ""),
         _pct("pct_native_born", ""),
-        Column("citizen_voting_age_population", "float64", "Citizens 18+ (B05003).", unit="persons"),
+        Column(
+            "citizen_voting_age_population", "float64", "Citizens 18+ (B05003).", unit="persons"
+        ),
     ),
 )
 
@@ -237,11 +308,28 @@ POPULATION = TableSchema(
         Column("births", "float64", "", unit="persons"),
         Column("deaths", "float64", "", unit="persons"),
         Column("natural_change", "float64", "", unit="persons (net)"),
-        Column("international_migration", "float64", "Net international migration.", unit="persons (net)"),
+        Column(
+            "international_migration",
+            "float64",
+            "Net international migration.",
+            unit="persons (net)",
+        ),
         Column("domestic_migration", "float64", "Net domestic migration.", unit="persons (net)"),
-        Column("net_migration", "float64", "Net migration (international + domestic).", unit="persons (net)"),
-        Column("domestic_migration_rate", "float64", "Per 1,000 population (PEP RDOMESTICMIG).", unit="per 1000"),
-        Column("net_migration_rate", "float64", "Per 1,000 population (PEP RNETMIG).", unit="per 1000"),
+        Column(
+            "net_migration",
+            "float64",
+            "Net migration (international + domestic).",
+            unit="persons (net)",
+        ),
+        Column(
+            "domestic_migration_rate",
+            "float64",
+            "Per 1,000 population (PEP RDOMESTICMIG).",
+            unit="per 1000",
+        ),
+        Column(
+            "net_migration_rate", "float64", "Per 1,000 population (PEP RNETMIG).", unit="per 1000"
+        ),
     ),
 )
 
@@ -300,7 +388,12 @@ LABOR = TableSchema(
         Column("labor_force", "float64", "", unit="persons"),
         Column("employment", "float64", "", unit="persons"),
         Column("unemployment", "float64", "", unit="persons"),
-        Column("unemployment_rate", "float64", "Percent (0-100) as published by BLS.", unit="percent 0-100"),
+        Column(
+            "unemployment_rate",
+            "float64",
+            "Percent (0-100) as published by BLS.",
+            unit="percent 0-100",
+        ),
     ),
     notes=("unemployment_rate is stored in BLS units (percent 0-100), not a 0-1 share.",),
 )
@@ -313,8 +406,18 @@ INDUSTRY = TableSchema(
     columns=_STATE_COLS
     + (
         Column("year", "int64", "", nullable=False),
-        Column("industry_code", "string", "QCEW industry code (10 = total, NAICS supersectors, sectors).", nullable=False),
-        Column("own_code", "string", "Ownership code (0 = total covered, 5 = private, 1-3 = government).", nullable=False),
+        Column(
+            "industry_code",
+            "string",
+            "QCEW industry code (10 = total, NAICS supersectors, sectors).",
+            nullable=False,
+        ),
+        Column(
+            "own_code",
+            "string",
+            "Ownership code (0 = total covered, 5 = private, 1-3 = government).",
+            nullable=False,
+        ),
         Column("agglvl_code", "string", "QCEW aggregation level code."),
         Column("annual_avg_establishments", "float64", "", unit="establishments"),
         Column("annual_avg_employment", "float64", "", unit="persons"),
@@ -332,9 +435,16 @@ STATE_ECONOMY = TableSchema(
     columns=_STATE_COLS
     + (
         Column("year", "int64", "", nullable=False),
-        Column("measure", "string", "real_gdp | nominal_gdp | personal_income | per_capita_personal_income | regional_price_parity | real_personal_income | ...", nullable=False),
+        Column(
+            "measure",
+            "string",
+            "real_gdp | nominal_gdp | personal_income | per_capita_personal_income | regional_price_parity | real_personal_income | ...",
+            nullable=False,
+        ),
         Column("value", "float64", ""),
-        Column("unit", "string", "Unit as published by BEA (e.g. millions of chained 2017 dollars)."),
+        Column(
+            "unit", "string", "Unit as published by BEA (e.g. millions of chained 2017 dollars)."
+        ),
         Column("bea_table", "string", "BEA table name (SAGDP9N, SAINC1, SARPP, ...)."),
         Column("line_code", "string", "BEA line code."),
     ),
@@ -348,7 +458,12 @@ NATIONAL_ECONOMY = TableSchema(
     columns=(
         Column("date", "date", "First day of the reference month.", nullable=False),
         Column("series_id", "string", "BLS series id.", nullable=False),
-        Column("measure", "string", "cpi_all_items | cpi_core | nonfarm_payrolls | average_hourly_earnings | unemployment_rate | labor_force_participation_rate", nullable=False),
+        Column(
+            "measure",
+            "string",
+            "cpi_all_items | cpi_core | nonfarm_payrolls | average_hourly_earnings | unemployment_rate | labor_force_participation_rate",
+            nullable=False,
+        ),
         Column("value", "float64", ""),
         Column("seasonally_adjusted", "bool", ""),
         Column("unit", "string", "index 1982-84=100 | thousands | USD | percent"),
@@ -363,17 +478,29 @@ CANDIDATES = TableSchema(
     columns=(
         Column("candidate_id", "string", "FEC candidate id.", nullable=False),
         Column("cycle", "int64", "Two-year election cycle (file year).", nullable=False),
-        Column("election_year", "int64", "Year of the candidate's election (FEC CAND_ELECTION_YR)."),
+        Column(
+            "election_year", "int64", "Year of the candidate's election (FEC CAND_ELECTION_YR)."
+        ),
         Column("name", "string", ""),
         Column("party_raw", "string", "FEC party code."),
         Column("party", "string", "Canonical party."),
         Column("office", "string", "president | senate | house"),
         Column("state", "string", "USPS abbr; 'US' for president."),
         Column("state_fips", "string", ""),
-        Column("district", "string", "Zero-padded district; 'statewide' for senate; '00' style raw preserved in district_raw."),
+        Column(
+            "district",
+            "string",
+            "Zero-padded district; 'statewide' for senate; '00' style raw preserved in district_raw.",
+        ),
         Column("district_raw", "string", ""),
-        Column("incumbent_challenger_status", "string", "I = incumbent, C = challenger, O = open seat."),
-        Column("candidate_status", "string", "C = statutory candidate, F = future, N = not yet, P = prior."),
+        Column(
+            "incumbent_challenger_status", "string", "I = incumbent, C = challenger, O = open seat."
+        ),
+        Column(
+            "candidate_status",
+            "string",
+            "C = statutory candidate, F = future, N = not yet, P = prior.",
+        ),
         Column("principal_committee_id", "string", ""),
     ),
 )
@@ -394,7 +521,9 @@ CANDIDATE_FINANCE = TableSchema(
         Column("state_fips", "string", ""),
         Column("district", "string", ""),
         Column("incumbent_challenger_status", "string", ""),
-        Column("coverage_end_date", "date", "End of the period covered by the totals.", nullable=False),
+        Column(
+            "coverage_end_date", "date", "End of the period covered by the totals.", nullable=False
+        ),
         Column("total_receipts", "float64", "", unit="USD"),
         Column("transfers_from_authorized", "float64", "", unit="USD"),
         Column("total_disbursements", "float64", "", unit="USD"),
@@ -498,8 +627,18 @@ SPECIAL_ELECTIONS = TableSchema(
         _pct("dem_vote_share", ""),
         _pct("rep_vote_share", ""),
         Column("actual_margin", "float64", "dem - rep", unit="share"),
-        Column("historical_baseline_margin", "float64", "Baseline partisan margin used for swing.", unit="share"),
-        Column("special_election_swing", "float64", "actual_margin - historical_baseline_margin", unit="share"),
+        Column(
+            "historical_baseline_margin",
+            "float64",
+            "Baseline partisan margin used for swing.",
+            unit="share",
+        ),
+        Column(
+            "special_election_swing",
+            "float64",
+            "actual_margin - historical_baseline_margin",
+            unit="share",
+        ),
     ),
 )
 
@@ -540,7 +679,9 @@ NAEP = TableSchema(
         Column("assessment_year", "int64", "", nullable=False),
         Column("grade", "int64", "4 | 8", nullable=False),
         Column("subject", "string", "mathematics | reading", nullable=False),
-        Column("average_score", "float64", "Average scale score (0-500 scale).", unit="scale score"),
+        Column(
+            "average_score", "float64", "Average scale score (0-500 scale).", unit="scale score"
+        ),
         _pct("pct_at_or_above_basic", ""),
         _pct("pct_at_or_above_proficient", ""),
         _pct("pct_advanced", ""),
@@ -654,9 +795,11 @@ def _cast_column(series: pd.Series, dtype: str) -> pd.Series:
     if dtype == "bool":
         if series.dtype == object or str(series.dtype) == "string":
             mapped = series.map(
-                lambda v: None
-                if v is None or (isinstance(v, float) and pd.isna(v)) or v is pd.NA
-                else str(v).strip().lower() in {"true", "1", "t", "yes", "y"}
+                lambda v: (
+                    None
+                    if v is None or (isinstance(v, float) and pd.isna(v)) or v is pd.NA
+                    else str(v).strip().lower() in {"true", "1", "t", "yes", "y"}
+                )
             )
             return mapped.astype("boolean")
         return series.astype("boolean")

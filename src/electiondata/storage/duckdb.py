@@ -29,7 +29,9 @@ def _sql_path(path: Path) -> str:
 
 
 @contextmanager
-def connect(paths: DataPaths | None = None, *, read_only: bool = False) -> Iterator[duckdb.DuckDBPyConnection]:
+def connect(
+    paths: DataPaths | None = None, *, read_only: bool = False
+) -> Iterator[duckdb.DuckDBPyConnection]:
     paths = paths or get_paths()
     paths.root.mkdir(parents=True, exist_ok=True)
     try:
@@ -54,7 +56,7 @@ def rebuild_database(paths: DataPaths | None = None) -> list[str]:
                 continue
             glob = _sql_path(paths.table_dir(table) / "*.parquet")
             con.execute(
-                f'CREATE OR REPLACE VIEW "{table}" AS SELECT * FROM read_parquet(\'{glob}\', union_by_name=true)'
+                f"CREATE OR REPLACE VIEW \"{table}\" AS SELECT * FROM read_parquet('{glob}', union_by_name=true)"
             )
             created.append(table)
         if paths.manifest_file.exists():
@@ -66,7 +68,11 @@ def rebuild_database(paths: DataPaths | None = None) -> list[str]:
     return created
 
 
-def query(sql: str, params: Sequence[Any] | Mapping[str, Any] | None = None, paths: DataPaths | None = None) -> pd.DataFrame:
+def query(
+    sql: str,
+    params: Sequence[Any] | Mapping[str, Any] | None = None,
+    paths: DataPaths | None = None,
+) -> pd.DataFrame:
     """Run an ad-hoc SQL query against the views (rebuilding them if stale)."""
     paths = paths or get_paths()
     if not paths.duckdb_path.exists():
@@ -137,5 +143,7 @@ def list_views(paths: DataPaths | None = None) -> list[str]:
     if not paths.duckdb_path.exists():
         return []
     with connect(paths, read_only=True) as con:
-        rows = con.execute("SELECT view_name FROM duckdb_views() WHERE NOT internal ORDER BY 1").fetchall()
+        rows = con.execute(
+            "SELECT view_name FROM duckdb_views() WHERE NOT internal ORDER BY 1"
+        ).fetchall()
     return [r[0] for r in rows]

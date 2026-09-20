@@ -11,7 +11,12 @@ def turnout_metrics(turnout: pd.DataFrame, population: pd.DataFrame | None = Non
     turnout_population (ballots / total population, the fallback when VAP is unknown).
     """
     out = turnout.copy()
-    for c in ("ballots_cast", "registered_voters", "citizen_voting_age_population", "voting_age_population"):
+    for c in (
+        "ballots_cast",
+        "registered_voters",
+        "citizen_voting_age_population",
+        "voting_age_population",
+    ):
         if c in out.columns:
             out[c] = pd.to_numeric(out[c], errors="coerce").astype("float64")
     reg = out["registered_voters"].replace(0, np.nan)
@@ -45,8 +50,12 @@ def previous_turnout(metrics: pd.DataFrame, office: str) -> pd.DataFrame:
     """Previous election's turnout for the same election type (presidential vs midterm)."""
     df = metrics.sort_values(["state", "year"]).copy()
     df["_cycle"] = np.where(df["year"] % 4 == 0, "presidential", "midterm")
-    df["previous_turnout_registered"] = df.groupby(["state", "_cycle"])["turnout_registered"].shift(1)
+    df["previous_turnout_registered"] = df.groupby(["state", "_cycle"])["turnout_registered"].shift(
+        1
+    )
     if "turnout_population" in df.columns:
-        df["previous_turnout_population"] = df.groupby(["state", "_cycle"])["turnout_population"].shift(1)
+        df["previous_turnout_population"] = df.groupby(["state", "_cycle"])[
+            "turnout_population"
+        ].shift(1)
     df["previous_ballots_cast"] = df.groupby(["state", "_cycle"])["ballots_cast"].shift(1)
     return df.drop(columns=["_cycle"])

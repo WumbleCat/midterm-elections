@@ -98,7 +98,8 @@ def _describe_rows(df: pd.DataFrame, idx: pd.Index, key: tuple[str, ...], limit:
     cols = [k for k in key if k in df.columns]
     if not cols:
         return f"{len(idx)} rows"
-    sample = df.loc[idx[:limit], cols].astype(str).agg("|".join, axis=1).tolist()
+    sub = df.loc[idx[:limit], cols].map(lambda v: "" if pd.isna(v) else str(v))
+    sample = sub.agg("|".join, axis=1).tolist()
     more = "" if len(idx) <= limit else f" (+{len(idx) - limit} more)"
     return ";".join(sample) + more
 
@@ -109,7 +110,9 @@ def _describe_rows(df: pd.DataFrame, idx: pd.Index, key: tuple[str, ...], limit:
 def rule_required_columns(df: pd.DataFrame, schema: TableSchema, ctx: RuleContext):
     for col in schema.all_columns:
         if not col.nullable and col.name not in df.columns:
-            yield ctx.issue("required_column_missing", "error", f"column {col.name} missing", field=col.name)
+            yield ctx.issue(
+                "required_column_missing", "error", f"column {col.name} missing", field=col.name
+            )
         elif not col.nullable and col.name in df.columns and df[col.name].isna().any():
             n = int(df[col.name].isna().sum())
             idx = df.index[df[col.name].isna()]
@@ -293,9 +296,9 @@ def rule_vote_reconciliation(df: pd.DataFrame, schema: TableSchema, ctx: RuleCon
         parts = ["dem_votes", "rep_votes", "other_votes", "total_candidate_votes"]
         if all(c in df.columns for c in parts):
             s = df[parts].apply(pd.to_numeric, errors="coerce")
-            diff = (s["dem_votes"].fillna(0) + s["rep_votes"].fillna(0) + s["other_votes"].fillna(0)) - s[
-                "total_candidate_votes"
-            ]
+            diff = (
+                s["dem_votes"].fillna(0) + s["rep_votes"].fillna(0) + s["other_votes"].fillna(0)
+            ) - s["total_candidate_votes"]
             bad = diff.abs() > 1
             if bad.any():
                 yield ctx.issue(
@@ -356,7 +359,16 @@ def rule_turnout_consistency(df: pd.DataFrame, schema: TableSchema, ctx: RuleCon
 def rule_share_groups_sum(df: pd.DataFrame, schema: TableSchema, ctx: RuleContext):
     groups = {
         "demographics": [
-            ["pct_under_18", "pct_18_24", "pct_25_34", "pct_35_44", "pct_45_54", "pct_55_64", "pct_65_74", "pct_75_plus"],
+            [
+                "pct_under_18",
+                "pct_18_24",
+                "pct_25_34",
+                "pct_35_44",
+                "pct_45_54",
+                "pct_55_64",
+                "pct_65_74",
+                "pct_75_plus",
+            ],
             ["pct_male", "pct_female"],
             [
                 "pct_less_than_high_school",
@@ -418,7 +430,9 @@ def validate_table(
     return report
 
 
-def compare_row_counts(previous: int | None, current: int, *, tolerance: float = 0.25) -> str | None:
+def compare_row_counts(
+    previous: int | None, current: int, *, tolerance: float = 0.25
+) -> str | None:
     """Return a warning message when the row count moved suspiciously versus the last run."""
     if previous is None or previous == 0:
         return None
@@ -439,6 +453,8 @@ def audit_frame(df: pd.DataFrame, table: str) -> dict[str, Any]:
         "columns": int(df.shape[1]),
         "duplicate_key_rows": int(df.duplicated(subset=key, keep=False).sum()) if key else None,
         "missingness_top": {k: round(float(v), 3) for k, v in missing.head(10).items()},
-        "datasets": sorted(df["dataset_id"].dropna().unique().tolist()) if "dataset_id" in df else [],
+        "datasets": sorted(df["dataset_id"].dropna().unique().tolist())
+        if "dataset_id" in df
+        else [],
         "states": int(df["state"].nunique()) if "state" in df else None,
     }

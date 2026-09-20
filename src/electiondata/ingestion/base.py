@@ -122,7 +122,9 @@ class IngestContext:
             content_type=result.content_type,
             reused=reused,
             note=note,
-            extra={"final_url": result.url.split("?")[0]} if result.url != result.requested_url else {},
+            extra={"final_url": result.url.split("?")[0]}
+            if result.url != result.requested_url
+            else {},
         )
         log.info(
             "raw artifact stored",
@@ -137,7 +139,16 @@ class IngestContext:
         )
         return artifact
 
-    def write_bytes(self, data: bytes, filename: str, *, url: str, params: dict[str, Any] | None = None, http_status: int | None = None, note: str = "") -> RawArtifact:
+    def write_bytes(
+        self,
+        data: bytes,
+        filename: str,
+        *,
+        url: str,
+        params: dict[str, Any] | None = None,
+        http_status: int | None = None,
+        note: str = "",
+    ) -> RawArtifact:
         """Store an in-memory payload (e.g. an API JSON response) as a raw artifact."""
         self.raw_dir.mkdir(parents=True, exist_ok=True)
         dest = self.target_path(filename)
@@ -185,7 +196,9 @@ class Connector(ABC):
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
         """Parse artifacts into canonical rows (no provenance columns)."""
 
-    def staging_frame(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame | None:
+    def staging_frame(
+        self, artifacts: list[RawArtifact], ctx: IngestContext
+    ) -> pd.DataFrame | None:
         """Optional: the as-received tabular form, saved under data/staging for debugging."""
         return None
 
@@ -194,7 +207,15 @@ class Connector(ABC):
         out = []
         for p in sorted(raw_dir.iterdir()):
             if p.is_file() and not p.name.endswith((".part", ".download", ".tmp")):
-                out.append(RawArtifact(path=p, url="", sha256=sha256_of_file(p), size_bytes=p.stat().st_size, reused=True))
+                out.append(
+                    RawArtifact(
+                        path=p,
+                        url="",
+                        sha256=sha256_of_file(p),
+                        size_bytes=p.stat().st_size,
+                        reused=True,
+                    )
+                )
         return out
 
 

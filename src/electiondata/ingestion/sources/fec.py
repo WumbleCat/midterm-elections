@@ -94,7 +94,9 @@ def read_pipe_zip(path: Path, columns: list[str]) -> pd.DataFrame:
     except zipfile.BadZipFile as exc:
         raise ParserError(f"{path.name}: not a zip file") from exc
     if df.shape[1] != len(columns):
-        raise SchemaChangeError(f"{path.name}: expected {len(columns)} pipe-delimited fields, found {df.shape[1]}")
+        raise SchemaChangeError(
+            f"{path.name}: expected {len(columns)} pipe-delimited fields, found {df.shape[1]}"
+        )
     df.columns = columns
     return df
 
@@ -115,7 +117,9 @@ def _office_from_id(cand_id: str) -> str | None:
     return OFFICE_MAP.get(str(cand_id)[:1].upper())
 
 
-def normalize_candidate_master(df: pd.DataFrame, cycle: int, retrieval_date: dt.date) -> pd.DataFrame:
+def normalize_candidate_master(
+    df: pd.DataFrame, cycle: int, retrieval_date: dt.date
+) -> pd.DataFrame:
     out = pd.DataFrame()
     out["candidate_id"] = df["CAND_ID"].str.strip()
     out["cycle"] = cycle
@@ -129,7 +133,9 @@ def normalize_candidate_master(df: pd.DataFrame, cycle: int, retrieval_date: dt.
     out["state"] = tmp["state"].where(out["office"] != "president", "US")
     out["state_fips"] = tmp["state_fips"]
     out["district_raw"] = df["CAND_OFFICE_DISTRICT"]
-    out["district"] = [_district(o, d) for o, d in zip(out["office"], df["CAND_OFFICE_DISTRICT"], strict=True)]
+    out["district"] = [
+        _district(o, d) for o, d in zip(out["office"], df["CAND_OFFICE_DISTRICT"], strict=True)
+    ]
     out["incumbent_challenger_status"] = df["CAND_ICI"].str.strip().str.upper().replace({"": None})
     out["candidate_status"] = df["CAND_STATUS"].str.strip().str.upper().replace({"": None})
     out["principal_committee_id"] = df["CAND_PCC"].str.strip().replace({"": None})
@@ -169,7 +175,9 @@ _MONEY = {
 }
 
 
-def normalize_candidate_finance(df: pd.DataFrame, cycle: int, retrieval_date: dt.date) -> pd.DataFrame:
+def normalize_candidate_finance(
+    df: pd.DataFrame, cycle: int, retrieval_date: dt.date
+) -> pd.DataFrame:
     out = pd.DataFrame()
     out["candidate_id"] = df["CAND_ID"].str.strip()
     out["cycle"] = cycle
@@ -181,7 +189,9 @@ def normalize_candidate_finance(df: pd.DataFrame, cycle: int, retrieval_date: dt
     tmp = add_state_columns(pd.DataFrame({"st": st}), "st")
     out["state"] = tmp["state"].where(out["office"] != "president", "US")
     out["state_fips"] = tmp["state_fips"]
-    out["district"] = [_district(o, d) for o, d in zip(out["office"], df["CAND_OFFICE_DISTRICT"], strict=True)]
+    out["district"] = [
+        _district(o, d) for o, d in zip(out["office"], df["CAND_OFFICE_DISTRICT"], strict=True)
+    ]
     out["incumbent_challenger_status"] = df["CAND_ICI"].str.strip().str.upper().replace({"": None})
     out["coverage_end_date"] = pd.to_datetime(df["CVG_END_DT"], format="%m/%d/%Y", errors="coerce")
     for src, dst in _MONEY.items():
@@ -191,7 +201,9 @@ def normalize_candidate_finance(df: pd.DataFrame, cycle: int, retrieval_date: dt
     out["period_start"] = pd.Timestamp(cycle - 1, 1, 1)
     out["period_end"] = out["coverage_end_date"]
     # Reports are due ~15-30 days after coverage end; the file we hold is a snapshot at retrieval.
-    est = out["coverage_end_date"].map(lambda d: pd.Timestamp(release_calendar.fec_summary(d.date())))
+    est = out["coverage_end_date"].map(
+        lambda d: pd.Timestamp(release_calendar.fec_summary(d.date()))
+    )
     out["publication_date"] = est.clip(upper=pd.Timestamp(retrieval_date))
     out["publication_date_estimated"] = True
     out["revision_vintage"] = retrieval_date.isoformat()
@@ -215,7 +227,11 @@ class _FecBulkConnector(Connector):
     def fetch(self, ctx: IngestContext) -> list[RawArtifact]:
         artifacts = []
         for cycle in self._cycles(ctx):
-            art = ctx.download(bulk_url(cycle, self.file_name), f"{self.file_name}{cycle}.zip", note=f"FEC {self.file_name} {cycle}")
+            art = ctx.download(
+                bulk_url(cycle, self.file_name),
+                f"{self.file_name}{cycle}.zip",
+                note=f"FEC {self.file_name} {cycle}",
+            )
             art.extra = {"cycle": cycle}
             artifacts.append(art)
         return artifacts
@@ -233,7 +249,9 @@ class CandidateMasterConnector(_FecBulkConnector):
         frames = []
         for art in artifacts:
             cycle = self._cycle_of(art)
-            frame = normalize_candidate_master(read_pipe_zip(art.path, CN_COLUMNS), cycle, ctx.retrieval_date)
+            frame = normalize_candidate_master(
+                read_pipe_zip(art.path, CN_COLUMNS), cycle, ctx.retrieval_date
+            )
             frame["source_url"] = art.url or bulk_url(cycle, "cn")
             frames.append(frame)
         return pd.concat(frames, ignore_index=True)
@@ -248,7 +266,9 @@ class CandidateFinanceConnector(_FecBulkConnector):
         frames = []
         for art in artifacts:
             cycle = self._cycle_of(art)
-            frame = normalize_candidate_finance(read_pipe_zip(art.path, WEBALL_COLUMNS), cycle, ctx.retrieval_date)
+            frame = normalize_candidate_finance(
+                read_pipe_zip(art.path, WEBALL_COLUMNS), cycle, ctx.retrieval_date
+            )
             frame["source_url"] = art.url or bulk_url(cycle, "weball")
             frames.append(frame)
         return pd.concat(frames, ignore_index=True)

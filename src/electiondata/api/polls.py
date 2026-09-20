@@ -40,7 +40,9 @@ def approval(*, as_of: DateLike | None = None, aggregate: bool = False) -> pd.Da
     return df.sort_values("end_date").reset_index(drop=True)
 
 
-def generic_ballot(*, as_of: DateLike | None = None, aggregate: bool = False) -> pd.DataFrame | dict:
+def generic_ballot(
+    *, as_of: DateLike | None = None, aggregate: bool = False
+) -> pd.DataFrame | dict:
     df = as_of_filter(load("generic_ballot_polls"), as_of)
     if aggregate:
         if as_of is None:

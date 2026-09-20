@@ -1,13 +1,13 @@
 """Filesystem layout of the local data store.
 
-    data/
-      raw/{source}/{dataset}/{retrieval_date}/   immutable downloads
-      staging/{dataset}/{retrieval_date}.parquet  parsed-as-received tables
-      processed/{table}/{dataset}.parquet         canonical normalized tables
-      features/                                   modelling-ready feature datasets
-      manifests/ingestion_runs.parquet            machine-readable run manifest
-      manifests/runs/{run_id}.json                full per-run metadata
-      electiondata.duckdb                         views over processed parquet
+data/
+  raw/{source}/{dataset}/{retrieval_date}/   immutable downloads
+  staging/{dataset}/{retrieval_date}.parquet  parsed-as-received tables
+  processed/{table}/{dataset}.parquet         canonical normalized tables
+  features/                                   modelling-ready feature datasets
+  manifests/ingestion_runs.parquet            machine-readable run manifest
+  manifests/runs/{run_id}.json                full per-run metadata
+  electiondata.duckdb                         views over processed parquet
 """
 
 from __future__ import annotations

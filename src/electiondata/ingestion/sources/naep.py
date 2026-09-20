@@ -37,7 +37,9 @@ def parse_naep_payload(payload: dict) -> pd.DataFrame:
         raise ParserError(f"NAEP response not OK: {str(payload)[:200]}")
     rows = payload["result"]
     if not rows:
-        return pd.DataFrame(columns=["year", "grade", "subject", "jurisdiction", "stattype", "value", "errorFlag"])
+        return pd.DataFrame(
+            columns=["year", "grade", "subject", "jurisdiction", "stattype", "value", "errorFlag"]
+        )
     df = pd.DataFrame(rows)
     need = {"year", "grade", "subject", "jurisdiction", "stattype", "value"}
     if not need <= set(df.columns):
@@ -53,8 +55,15 @@ def normalize_naep(df: pd.DataFrame) -> pd.DataFrame:
     df["value"] = pd.to_numeric(df["value"], errors="coerce")
     if "isStatDisplayable" in df.columns:
         df.loc[pd.to_numeric(df["isStatDisplayable"], errors="coerce") == 0, "value"] = pd.NA
-    df["subject_name"] = df["subject"].map(lambda s: _SUBJECT_CODES.get(str(s).upper(), str(s).lower()))
-    wide = df.pivot_table(index=["jurisdiction", "year", "grade", "subject_name"], columns="stattype", values="value", aggfunc="first").reset_index()
+    df["subject_name"] = df["subject"].map(
+        lambda s: _SUBJECT_CODES.get(str(s).upper(), str(s).lower())
+    )
+    wide = df.pivot_table(
+        index=["jurisdiction", "year", "grade", "subject_name"],
+        columns="stattype",
+        values="value",
+        aggfunc="first",
+    ).reset_index()
     wide.columns.name = None
     wide = add_state_columns(wide, "jurisdiction")
     wide = wide[wide["state"].notna()]
@@ -73,12 +82,16 @@ def normalize_naep(df: pd.DataFrame) -> pd.DataFrame:
     pr = wide.get("ALD:PR")
     ad = wide.get("ALD:AD")
     out["pct_at_or_above_basic"] = (100 - bb) / 100 if bb is not None else pd.NA
-    out["pct_at_or_above_proficient"] = (pr + ad) / 100 if pr is not None and ad is not None else pd.NA
+    out["pct_at_or_above_proficient"] = (
+        (pr + ad) / 100 if pr is not None and ad is not None else pd.NA
+    )
     out["pct_advanced"] = ad / 100 if ad is not None else pd.NA
     out["observation_date"] = out["assessment_year"].map(lambda y: pd.Timestamp(int(y), 3, 1))
     out["period_start"] = out["assessment_year"].map(lambda y: pd.Timestamp(int(y), 1, 1))
     out["period_end"] = out["assessment_year"].map(lambda y: pd.Timestamp(int(y), 3, 31))
-    out["publication_date"] = out["assessment_year"].map(lambda y: pd.Timestamp(release_calendar.naep(int(y))))
+    out["publication_date"] = out["assessment_year"].map(
+        lambda y: pd.Timestamp(release_calendar.naep(int(y)))
+    )
     out["publication_date_estimated"] = True
     out["revision_vintage"] = out["assessment_year"].astype(str)
     return out.reset_index(drop=True)

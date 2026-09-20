@@ -12,11 +12,17 @@ def _month_floor(d: DateLike) -> pd.Timestamp:
     return pd.Timestamp(to_date(d)).to_period("M").to_timestamp()
 
 
-def unemployment_features(labor: pd.DataFrame, as_of: DateLike, *, seasonally_adjusted: bool = True) -> pd.DataFrame:
+def unemployment_features(
+    labor: pd.DataFrame, as_of: DateLike, *, seasonally_adjusted: bool = True
+) -> pd.DataFrame:
     """Per state: latest month available as of ``as_of`` plus 3m/12m changes and
     12-month averages/employment growth, all computed from months published by ``as_of``.
     """
-    df = labor[labor["seasonally_adjusted"] == seasonally_adjusted] if "seasonally_adjusted" in labor.columns else labor
+    df = (
+        labor[labor["seasonally_adjusted"] == seasonally_adjusted]
+        if "seasonally_adjusted" in labor.columns
+        else labor
+    )
     avail = filter_as_of(df, as_of).copy()
     if avail.empty:
         return pd.DataFrame(columns=["state", "labor_month", "unemployment_rate"])
@@ -30,8 +36,8 @@ def unemployment_features(labor: pd.DataFrame, as_of: DateLike, *, seasonally_ad
         emp = g["employment"].astype("float64")
         lf = g["labor_force"].astype("float64")
 
-        def at(series: pd.Series, months_back: int) -> float:
-            target = last - pd.DateOffset(months=months_back)
+        def at(series: pd.Series, months_back: int, _last: pd.Timestamp = last) -> float:
+            target = _last - pd.DateOffset(months=months_back)
             return float(series.get(target, np.nan))
 
         rows.append(
@@ -40,11 +46,17 @@ def unemployment_features(labor: pd.DataFrame, as_of: DateLike, *, seasonally_ad
                 "labor_month": last,
                 "unemployment_rate": float(ur.iloc[-1]),
                 "unemployment_rate_3m_avg": float(ur.iloc[-3:].mean()) if len(ur) >= 3 else np.nan,
-                "unemployment_rate_12m_avg": float(ur.iloc[-12:].mean()) if len(ur) >= 12 else np.nan,
+                "unemployment_rate_12m_avg": float(ur.iloc[-12:].mean())
+                if len(ur) >= 12
+                else np.nan,
                 "unemployment_change_3m": float(ur.iloc[-1]) - at(ur, 3),
                 "unemployment_change_12m": float(ur.iloc[-1]) - at(ur, 12),
-                "employment_growth_12m": float(emp.iloc[-1]) / at(emp, 12) - 1 if at(emp, 12) else np.nan,
-                "labor_force_growth_12m": float(lf.iloc[-1]) / at(lf, 12) - 1 if at(lf, 12) else np.nan,
+                "employment_growth_12m": float(emp.iloc[-1]) / at(emp, 12) - 1
+                if at(emp, 12)
+                else np.nan,
+                "labor_force_growth_12m": float(lf.iloc[-1]) / at(lf, 12) - 1
+                if at(lf, 12)
+                else np.nan,
                 "labor_publication_date": g["publication_date"].max(),
             }
         )
@@ -82,13 +94,29 @@ def industry_shares(industry: pd.DataFrame, as_of: DateLike) -> pd.DataFrame:
     latest_year = int(avail["year"].max())
     y = avail[avail["year"] == latest_year]
     total = y[(y["industry_code"] == "10") & (y["own_code"] == "0")].set_index("state")
-    out = pd.DataFrame({"state": total.index, "industry_year": latest_year, "total_employment": total["annual_avg_employment"].values, "average_weekly_wage": total["annual_avg_weekly_wage"].values, "avg_annual_pay": total["avg_annual_pay"].values})
+    out = pd.DataFrame(
+        {
+            "state": total.index,
+            "industry_year": latest_year,
+            "total_employment": total["annual_avg_employment"].values,
+            "average_weekly_wage": total["annual_avg_weekly_wage"].values,
+            "avg_annual_pay": total["avg_annual_pay"].values,
+        }
+    )
     out = out.set_index("state")
     private = y[y["own_code"] == "5"]
     for code, name in INDUSTRY_SHARE_CODES.items():
-        sub = private[private["industry_code"] == code].groupby("state")["annual_avg_employment"].sum(min_count=1)
+        sub = (
+            private[private["industry_code"] == code]
+            .groupby("state")["annual_avg_employment"]
+            .sum(min_count=1)
+        )
         out[name] = sub.reindex(out.index) / out["total_employment"]
-    gov = y[(y["industry_code"] == "10") & (y["own_code"].isin(["1", "2", "3"]))].groupby("state")["annual_avg_employment"].sum(min_count=1)
+    gov = (
+        y[(y["industry_code"] == "10") & (y["own_code"].isin(["1", "2", "3"]))]
+        .groupby("state")["annual_avg_employment"]
+        .sum(min_count=1)
+    )
     out["pct_government"] = gov.reindex(out.index) / out["total_employment"]
     return out.reset_index()
 
@@ -98,11 +126,19 @@ def state_economy_features(state_economy: pd.DataFrame, as_of: DateLike) -> pd.D
     avail = filter_as_of(state_economy, as_of)
     if avail.empty:
         return pd.DataFrame(columns=["state"])
-    wide = avail.pivot_table(index=["state", "year"], columns="measure", values="value", aggfunc="first").reset_index()
+    wide = avail.pivot_table(
+        index=["state", "year"], columns="measure", values="value", aggfunc="first"
+    ).reset_index()
     wide.columns.name = None
     wide = wide.sort_values(["state", "year"])
     out = wide.groupby("state", as_index=False).tail(1).copy()
-    for m in ("real_gdp", "nominal_gdp", "personal_income", "real_personal_income", "per_capita_personal_income"):
+    for m in (
+        "real_gdp",
+        "nominal_gdp",
+        "personal_income",
+        "real_personal_income",
+        "per_capita_personal_income",
+    ):
         if m in wide.columns:
             growth = wide.groupby("state")[m].pct_change()
             wide[f"{m}_growth"] = growth

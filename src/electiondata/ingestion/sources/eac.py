@@ -51,7 +51,11 @@ def read_eavs_zip(path) -> pd.DataFrame:  # noqa: ANN001
             if not names:
                 raise ParserError(f"{path.name}: no CSV inside zip")
             with zf.open(names[0]) as fh:
-                return pd.read_csv(io.TextIOWrapper(fh, encoding="utf-8", errors="replace"), dtype=str, low_memory=False)
+                return pd.read_csv(
+                    io.TextIOWrapper(fh, encoding="utf-8", errors="replace"),
+                    dtype=str,
+                    low_memory=False,
+                )
     except zipfile.BadZipFile as exc:
         raise ParserError(f"{path.name}: not a zip file") from exc
 
@@ -94,14 +98,18 @@ class EavsConnector(Connector):
             years = [int(y) for y in years.split(",") if y.strip()]
         unknown = [y for y in years if y not in EAVS_FILES]
         if unknown:
-            raise SchemaChangeError(f"no EAVS download URL registered for years {unknown}; known: {sorted(EAVS_FILES)}")
+            raise SchemaChangeError(
+                f"no EAVS download URL registered for years {unknown}; known: {sorted(EAVS_FILES)}"
+            )
         return sorted(int(y) for y in years)
 
     def fetch(self, ctx: IngestContext) -> list[RawArtifact]:
         artifacts = []
         for year in self._years(ctx):
             url = EAVS_FILES[year]
-            art = ctx.download(url, f"eavs_{year}.zip", note=f"EAVS {year} public release (nolabel CSV)")
+            art = ctx.download(
+                url, f"eavs_{year}.zip", note=f"EAVS {year} public release (nolabel CSV)"
+            )
             art.extra = {"year": year}
             artifacts.append(art)
         return artifacts
@@ -109,7 +117,9 @@ class EavsConnector(Connector):
     def parse(self, artifacts: list[RawArtifact], ctx: IngestContext) -> pd.DataFrame:
         frames = []
         for art in artifacts:
-            year = art.extra.get("year") or int("".join(ch for ch in art.path.stem if ch.isdigit())[:4])
+            year = art.extra.get("year") or int(
+                "".join(ch for ch in art.path.stem if ch.isdigit())[:4]
+            )
             raw = read_eavs_zip(art.path)
             out = normalize_eavs(raw, int(year))
             pub = release_calendar.from_url_month_folder(art.url or EAVS_FILES.get(int(year), ""))

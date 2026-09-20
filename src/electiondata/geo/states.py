@@ -202,8 +202,12 @@ def add_state_columns(
     """
     out = df.copy()
     out["state"] = out[source_col].map(normalize_state)
-    out["state_fips"] = out["state"].map(lambda a: STATE_BY_ABBR[a].fips if a in STATE_BY_ABBR else None)
-    out["state_name"] = out["state"].map(lambda a: STATE_BY_ABBR[a].name if a in STATE_BY_ABBR else None)
+    out["state_fips"] = out["state"].map(
+        lambda a: STATE_BY_ABBR[a].fips if a in STATE_BY_ABBR else None
+    )
+    out["state_name"] = out["state"].map(
+        lambda a: STATE_BY_ABBR[a].name if a in STATE_BY_ABBR else None
+    )
     if drop_unmapped:
         out = out[out["state"].notna()]
     return out

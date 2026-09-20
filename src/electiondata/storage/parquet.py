@@ -40,7 +40,9 @@ def read_parquet(path: Path) -> pd.DataFrame:
         raise StorageError(f"failed to read {path}: {exc}") from exc
 
 
-def write_processed(df: pd.DataFrame, table: str, dataset_id: str, paths: DataPaths | None = None) -> Path:
+def write_processed(
+    df: pd.DataFrame, table: str, dataset_id: str, paths: DataPaths | None = None
+) -> Path:
     paths = paths or get_paths()
     schema = SCHEMAS[table]
     df = enforce_schema(df, schema)
@@ -55,7 +57,9 @@ def list_processed_files(table: str, paths: DataPaths | None = None) -> list[Pat
     return sorted(p for p in d.glob("*.parquet") if not p.name.endswith(".tmp"))
 
 
-def read_table(table: str, paths: DataPaths | None = None, *, missing_ok: bool = False) -> pd.DataFrame:
+def read_table(
+    table: str, paths: DataPaths | None = None, *, missing_ok: bool = False
+) -> pd.DataFrame:
     """Read the union of all dataset files of a processed table.
 
     Raises :class:`DatasetUnavailableError` when nothing has been ingested
@@ -98,4 +102,6 @@ def table_inventory(paths: DataPaths | None = None) -> pd.DataFrame:
                         "path": str(f),
                     }
                 )
-    return pd.DataFrame(rows, columns=["table", "dataset_id", "rows", "columns", "size_bytes", "modified", "path"])
+    return pd.DataFrame(
+        rows, columns=["table", "dataset_id", "rows", "columns", "size_bytes", "modified", "path"]
+    )

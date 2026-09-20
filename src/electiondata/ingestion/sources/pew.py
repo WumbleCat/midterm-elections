@@ -29,7 +29,9 @@ class ReligionConnector(ManualFileConnector):
             raise SchemaChangeError(f"religion CSV missing {sorted(missing)}")
         st = add_state_columns(df, "state")
         if st["state"].isna().any():
-            raise SchemaChangeError(f"unmapped states: {df.loc[st['state'].isna(), 'state'].unique()[:5]}")
+            raise SchemaChangeError(
+                f"unmapped states: {df.loc[st['state'].isna(), 'state'].unique()[:5]}"
+            )
         out = pd.DataFrame(
             {
                 "state": st["state"],
