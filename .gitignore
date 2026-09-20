@@ -1,0 +1,31 @@
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+
+# Virtual environments
+.venv
+
+# IDE
+.idea/
+.vscode/
+
+# Secrets
+.env
+
+# Data store: raw downloads, staging, processed parquet, features and the DuckDB
+# file are NOT versioned (they can be large and are fully reproducible from the
+# ingestion pipeline). Only manifests are kept so provenance survives a clone.
+data/raw/
+data/staging/
+data/processed/
+data/features/
+data/*.duckdb
+data/*.duckdb.wal
+data/manifests/runs/
