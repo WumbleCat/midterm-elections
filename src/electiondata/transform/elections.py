@@ -78,7 +78,8 @@ def race_summary(results: pd.DataFrame) -> pd.DataFrame:
     first = ranked.head(1)[[*RACE_KEY, "party", "votes"]].rename(
         columns={"party": "winner_party", "votes": "_v1"}
     )
-    second = ranked.nth(1)[[*RACE_KEY, "votes"]].rename(columns={"votes": "_v2"})
+    second_df: pd.DataFrame = ranked.nth(1)  # type: ignore[assignment]
+    second = second_df[[*RACE_KEY, "votes"]].rename(columns={"votes": "_v2"})
     out = out.merge(first, on=RACE_KEY, how="left").merge(second, on=RACE_KEY, how="left")
 
     out = derived_metrics(out)

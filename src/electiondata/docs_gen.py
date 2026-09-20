@@ -36,7 +36,7 @@ def _fmt_ts(value: object) -> str:
     ):
         return "-"
     try:
-        return pd.Timestamp(value).strftime("%Y-%m-%d")
+        return pd.Timestamp(value).strftime("%Y-%m-%d")  # type: ignore[arg-type]
     except (ValueError, TypeError):
         return str(value)
 
@@ -93,7 +93,8 @@ def status_markdown(paths: DataPaths | None = None) -> str:
         "|---|---|---|---|---|---|---|---|---|---|",
     ]
     for _, r in df.iterrows():
-        last_run = f"{r['last_run']} ({r['last_run_status']})" if r["last_run_status"] else "-"
+        has_run = r["last_run_status"] is not None and pd.notna(r["last_run_status"])
+        last_run = f"{r['last_run']} ({r['last_run_status']})" if has_run else "-"
         note = r["notes"].replace("|", "/")
         if r["last_error"]:
             note = f"**last error:** {r['last_error'].replace('|', '/')} — {note}"

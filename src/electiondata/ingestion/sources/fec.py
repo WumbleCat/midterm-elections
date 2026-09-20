@@ -113,6 +113,10 @@ def _district(office: str, raw: str | None) -> str:
     return "at-large" if n == 0 else f"{n:02d}"
 
 
+def _blank_to_null(series: pd.Series) -> pd.Series:
+    return series.mask(series == "")
+
+
 def _office_from_id(cand_id: str) -> str | None:
     return OFFICE_MAP.get(str(cand_id)[:1].upper())
 
@@ -136,9 +140,9 @@ def normalize_candidate_master(
     out["district"] = [
         _district(o, d) for o, d in zip(out["office"], df["CAND_OFFICE_DISTRICT"], strict=True)
     ]
-    out["incumbent_challenger_status"] = df["CAND_ICI"].str.strip().str.upper().replace({"": None})
-    out["candidate_status"] = df["CAND_STATUS"].str.strip().str.upper().replace({"": None})
-    out["principal_committee_id"] = df["CAND_PCC"].str.strip().replace({"": None})
+    out["incumbent_challenger_status"] = _blank_to_null(df["CAND_ICI"].str.strip().str.upper())
+    out["candidate_status"] = _blank_to_null(df["CAND_STATUS"].str.strip().str.upper())
+    out["principal_committee_id"] = _blank_to_null(df["CAND_PCC"].str.strip())
     out = out[out["office"].notna() & out["candidate_id"].notna()]
     # The bulk file is a rolling snapshot. Candidate registrations (Form 2) are
     # public as filed and general-election candidates have filed well before the
@@ -192,7 +196,7 @@ def normalize_candidate_finance(
     out["district"] = [
         _district(o, d) for o, d in zip(out["office"], df["CAND_OFFICE_DISTRICT"], strict=True)
     ]
-    out["incumbent_challenger_status"] = df["CAND_ICI"].str.strip().str.upper().replace({"": None})
+    out["incumbent_challenger_status"] = _blank_to_null(df["CAND_ICI"].str.strip().str.upper())
     out["coverage_end_date"] = pd.to_datetime(df["CVG_END_DT"], format="%m/%d/%Y", errors="coerce")
     for src, dst in _MONEY.items():
         out[dst] = pd.to_numeric(df[src], errors="coerce")
@@ -204,7 +208,8 @@ def normalize_candidate_finance(
     est = out["coverage_end_date"].map(
         lambda d: pd.Timestamp(release_calendar.fec_summary(d.date()))
     )
-    out["publication_date"] = est.clip(upper=pd.Timestamp(retrieval_date))
+    cap = pd.Timestamp(retrieval_date)
+    out["publication_date"] = est.where(est <= cap, cap)
     out["publication_date_estimated"] = True
     out["revision_vintage"] = retrieval_date.isoformat()
     return out.reset_index(drop=True)

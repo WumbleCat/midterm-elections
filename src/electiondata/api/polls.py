@@ -8,7 +8,7 @@ import pandas as pd
 
 from ..quality.point_in_time import DateLike
 from ..transform import polls as polls_t
-from ._common import apply_filters, as_of_filter, load, norm_office, norm_states
+from ._common import apply_filters, as_of_filter, load, norm_office, norm_states, require_office
 
 
 def races(
@@ -24,7 +24,7 @@ def races(
     if aggregate:
         if year is None or office is None or as_of is None:
             raise ValueError("aggregate=True requires year, office and as_of")
-        out = polls_t.race_poll_features(df, year, norm_office(office), as_of)
+        out = polls_t.race_poll_features(df, year, require_office(office), as_of)
         return apply_filters(out, state=norm_states(state)).reset_index(drop=True)
     df = as_of_filter(df, as_of)
     df = apply_filters(df, year=year, state=norm_states(state), office=norm_office(office))

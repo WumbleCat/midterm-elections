@@ -33,6 +33,12 @@ def _read_manual_csvs(artifacts: list[RawArtifact]) -> pd.DataFrame:
     return pd.concat(frames, ignore_index=True)
 
 
+def _num(df: pd.DataFrame, col: str) -> pd.Series:
+    if col in df.columns:
+        return pd.to_numeric(df[col], errors="coerce")
+    return pd.Series(pd.NA, index=df.index, dtype="Float64")
+
+
 def _share(series: pd.Series) -> pd.Series:
     v = pd.to_numeric(series, errors="coerce")
     return v.where(v <= 1.0, v / 100.0)
@@ -78,7 +84,7 @@ class ApprovalPollsConnector(ManualFileConnector):
         )
         out = pd.DataFrame({"poll_id": df["poll_id"], "pollster": df["pollster"]})
         out["president"] = df.get("president")
-        out["sample_size"] = pd.to_numeric(df.get("sample_size"), errors="coerce")
+        out["sample_size"] = _num(df, "sample_size")
         out["population_type"] = df.get("population_type")
         out["approve"] = _share(df["approve"])
         out["disapprove"] = _share(df["disapprove"])
@@ -109,7 +115,7 @@ class GenericBallotConnector(ManualFileConnector):
             "generic ballot",
         )
         out = pd.DataFrame({"poll_id": df["poll_id"], "pollster": df["pollster"]})
-        out["sample_size"] = pd.to_numeric(df.get("sample_size"), errors="coerce")
+        out["sample_size"] = _num(df, "sample_size")
         out["population_type"] = df.get("population_type")
         out["generic_dem"] = _share(df["generic_dem"])
         out["generic_rep"] = _share(df["generic_rep"])
@@ -156,7 +162,7 @@ class RacePollsConnector(ManualFileConnector):
                 "pollster": df["pollster"],
                 "pollster_grade": df.get("pollster_grade"),
                 "sponsor": df.get("sponsor"),
-                "sample_size": pd.to_numeric(df.get("sample_size"), errors="coerce"),
+                "sample_size": _num(df, "sample_size"),
                 "population_type": df.get("population_type"),
                 "mode": df.get("mode"),
                 "dem_candidate": df.get("dem_candidate"),

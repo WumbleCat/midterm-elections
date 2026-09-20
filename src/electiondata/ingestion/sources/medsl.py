@@ -11,6 +11,7 @@ import csv
 import datetime as dt
 import json
 from pathlib import Path
+from typing import Any
 
 import pandas as pd
 
@@ -149,7 +150,7 @@ def _collapse_fusion(df: pd.DataFrame) -> pd.DataFrame:
         return df
     single = df[~dup]
     multi = df[dup].sort_values("votes", ascending=False)
-    agg = {c: "first" for c in multi.columns if c not in key}
+    agg: dict[str, Any] = {c: "first" for c in multi.columns if c not in key}
     agg["votes"] = "sum"
     agg["party_raw"] = lambda s: " + ".join(str(x) for x in s)
     collapsed = multi.groupby(key, dropna=False, as_index=False).agg(agg)

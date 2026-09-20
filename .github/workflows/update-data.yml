@@ -1,0 +1,69 @@
+name: update-data
+
+# Scheduled refresh of the keyless datasets. Raw/processed data are NOT committed (they are
+# git-ignored and can be large); the job uploads the manifest and processed parquet as a
+# workflow artifact and fails visibly when any ingestion or validation fails.
+# Secrets (optional): CENSUS_API_KEY, BEA_API_KEY, BLS_API_KEY, ELECTIONDATA_CONTACT_EMAIL.
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Mondays 09:00 UTC
+  workflow_dispatch:
+    inputs:
+      datasets:
+        description: "Space-separated dataset ids (default: all automatic datasets)"
+        required: false
+        default: ""
+
+jobs:
+  tests:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv sync --extra dev
+      - run: uv run ruff check src tests
+      - run: uv run pytest tests/unit -q
+
+  update:
+    needs: tests
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    env:
+      CENSUS_API_KEY: ${{ secrets.CENSUS_API_KEY }}
+      BEA_API_KEY: ${{ secrets.BEA_API_KEY }}
+      BLS_API_KEY: ${{ secrets.BLS_API_KEY }}
+      ELECTIONDATA_CONTACT_EMAIL: ${{ secrets.ELECTIONDATA_CONTACT_EMAIL }}
+      ELECTIONDATA_DATA_DIR: ${{ github.workspace }}/data
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv python install 3.12
+      - run: uv sync
+      - name: Ingest
+        run: |
+          if [ -n "${{ github.event.inputs.datasets }}" ]; then
+            uv run electiondata ingest ${{ github.event.inputs.datasets }}
+          else
+            uv run electiondata update
+          fi
+      - name: Transform, validate, rebuild views
+        run: |
+          uv run electiondata transform
+          uv run electiondata validate
+          uv run electiondata rebuild-db
+      - name: Status
+        if: always()
+        run: |
+          uv run electiondata status
+          uv run electiondata runs --limit 30
+      - name: Upload manifest and processed tables
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: electiondata-processed-${{ github.run_id }}
+          path: |
+            data/manifests/
+            data/processed/
+          retention-days: 30

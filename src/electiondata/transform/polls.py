@@ -44,12 +44,11 @@ def approval_features(approval: pd.DataFrame, as_of: DateLike) -> dict[str, floa
             _weighted_mean(w["net_approval"], w.get("sample_size")) if not w.empty else None
         )
     prev = _window(approval, pd.Timestamp(to_date(as_of)) - pd.Timedelta(days=30), 30)
-    if out.get("approval_average_30d") is not None and not prev.empty:
-        out["approval_change_30d"] = out["approval_average_30d"] - (
-            _weighted_mean(prev["approve"], prev.get("sample_size")) or np.nan
-        )
-    else:
-        out["approval_change_30d"] = None
+    cur_a = out.get("approval_average_30d")
+    prev_a = _weighted_mean(prev["approve"], prev.get("sample_size")) if not prev.empty else None
+    out["approval_change_30d"] = (
+        cur_a - prev_a if cur_a is not None and prev_a is not None else None
+    )
     out["n_approval_polls_30d"] = int(len(_window(approval, as_of, 30)))
     return out
 
@@ -69,12 +68,11 @@ def generic_ballot_features(generic: pd.DataFrame, as_of: DateLike) -> dict[str,
         _weighted_mean(w30["generic_rep"], w30.get("sample_size")) if not w30.empty else None
     )
     prev = _window(generic, pd.Timestamp(to_date(as_of)) - pd.Timedelta(days=30), 30)
-    if out.get("generic_margin_30d") is not None and not prev.empty:
-        out["generic_change_30d"] = out["generic_margin_30d"] - (
-            _weighted_mean(prev["generic_margin"], prev.get("sample_size")) or np.nan
-        )
-    else:
-        out["generic_change_30d"] = None
+    cur_g = out.get("generic_margin_30d")
+    prev_g = (
+        _weighted_mean(prev["generic_margin"], prev.get("sample_size")) if not prev.empty else None
+    )
+    out["generic_change_30d"] = cur_g - prev_g if cur_g is not None and prev_g is not None else None
     out["n_generic_polls_30d"] = int(len(w30))
     return out
 

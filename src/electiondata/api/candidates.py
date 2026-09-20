@@ -8,7 +8,15 @@ import pandas as pd
 
 from ..quality.point_in_time import DateLike
 from ..transform import candidates as cand_t
-from ._common import apply_filters, as_of_filter, latest_vintage, load, norm_office, norm_states
+from ._common import (
+    apply_filters,
+    as_of_filter,
+    latest_vintage,
+    load,
+    norm_office,
+    norm_states,
+    require_office,
+)
 
 
 def candidates(
@@ -30,7 +38,7 @@ def candidates(
 
 def incumbency(year: int, office: str, *, as_of: DateLike | None = None) -> pd.DataFrame:
     """dem_incumbent / rep_incumbent / open_seat per race."""
-    return cand_t.incumbency_features(load("candidates"), year, norm_office(office), as_of)
+    return cand_t.incumbency_features(load("candidates"), year, require_office(office), as_of)
 
 
 def finance(
@@ -50,7 +58,7 @@ def finance(
     if race_level:
         if year is None or office is None or as_of is None:
             raise ValueError("race_level=True requires year, office and as_of")
-        out = cand_t.finance_features(df, year, norm_office(office), as_of)
+        out = cand_t.finance_features(df, year, require_office(office), as_of)
         return apply_filters(out, state=norm_states(state)).reset_index(drop=True)
     df = as_of_filter(df, as_of)
     df = apply_filters(df, cycle=year, state=norm_states(state), office=norm_office(office))

@@ -2,6 +2,8 @@
 
 from __future__ import annotations
 
+from typing import Any
+
 import numpy as np
 import pandas as pd
 
@@ -148,7 +150,7 @@ def state_economy_features(state_economy: pd.DataFrame, as_of: DateLike) -> pd.D
     return out.rename(columns={"year": "state_economy_year"}).reset_index(drop=True)
 
 
-def national_features(national: pd.DataFrame, as_of: DateLike) -> dict[str, float | None]:
+def national_features(national: pd.DataFrame, as_of: DateLike) -> dict[str, Any]:
     """National economic conditions available as of ``as_of``: unemployment, CPI y/y and 3m annualised,
     payroll growth (1m/3m/12m), average hourly earnings growth."""
     avail = filter_as_of(national, as_of)
@@ -156,7 +158,7 @@ def national_features(national: pd.DataFrame, as_of: DateLike) -> dict[str, floa
         return {}
     avail = avail.copy()
     avail["date"] = pd.to_datetime(avail["date"])
-    out: dict[str, float | None] = {}
+    out: dict[str, Any] = {}
 
     def series(measure: str, sa: bool | None = True) -> pd.Series:
         sub = avail[avail["measure"] == measure]
@@ -195,8 +197,9 @@ def national_features(national: pd.DataFrame, as_of: DateLike) -> dict[str, floa
     out["payroll_growth_12m"] = change(pay, 12)
     ahe = series("average_hourly_earnings")
     out["wage_growth_12m"] = change(ahe, 12)
-    if out.get("wage_growth_12m") is not None and out.get("cpi_yoy") is not None:
-        out["real_wage_growth_12m"] = (1 + out["wage_growth_12m"]) / (1 + out["cpi_yoy"]) - 1
+    wg, cy = out.get("wage_growth_12m"), out.get("cpi_yoy")
+    if wg is not None and cy is not None:
+        out["real_wage_growth_12m"] = (1 + wg) / (1 + cy) - 1
     out["national_data_month"] = str(avail["date"].max().date())
     return out
 

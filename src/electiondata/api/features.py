@@ -9,7 +9,7 @@ import pandas as pd
 
 from ..quality.point_in_time import DateLike
 from ..transform.features import FeatureBuild, audit_features, build_features, load_features
-from ._common import norm_office, norm_states
+from ._common import norm_states, require_office
 
 
 def build(
@@ -26,7 +26,7 @@ def build(
     Returns a DataFrame by default; ``return_build=True`` returns the
     :class:`FeatureBuild` (frame + provenance metadata + path).
     """
-    fb = build_features(year, norm_office(office), as_of, states=norm_states(state), write=write)
+    fb = build_features(year, require_office(office), as_of, states=norm_states(state), write=write)
     return fb if return_build else fb.frame
 
 
@@ -36,7 +36,7 @@ def load(path: str | Path) -> pd.DataFrame:
 
 def audit(year: int, office: str, as_of: DateLike | None = None) -> dict:
     """Point-in-time audit of a feature build (families, publication cut-offs, leakage flags)."""
-    fb = build_features(year, norm_office(office), as_of, write=False, strict=False)
+    fb = build_features(year, require_office(office), as_of, write=False, strict=False)
     return audit_features(fb)
 
 

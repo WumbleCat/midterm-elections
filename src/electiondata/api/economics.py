@@ -92,7 +92,7 @@ def national(
             values="value",
             aggfunc="first",
         )
-        w.columns = [f"{m}_{'sa' if sa else 'nsa'}" for m, sa in w.columns]
+        w.columns = [f"{col[0]}_{'sa' if col[1] else 'nsa'}" for col in w.columns.tolist()]
         return w.reset_index()
     return df.sort_values(["measure", "date"]).reset_index(drop=True)
 

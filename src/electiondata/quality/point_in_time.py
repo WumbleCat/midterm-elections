@@ -9,7 +9,7 @@ from __future__ import annotations
 
 import datetime as dt
 from collections.abc import Sequence
-from typing import Any
+from typing import Any, overload
 
 import pandas as pd
 
@@ -19,6 +19,14 @@ from ..logging import get_logger
 log = get_logger("point_in_time")
 
 DateLike = str | dt.date | dt.datetime | pd.Timestamp
+
+
+@overload
+def to_date(value: None) -> None: ...
+
+
+@overload
+def to_date(value: DateLike) -> dt.date: ...
 
 
 def to_date(value: DateLike | None) -> dt.date | None:

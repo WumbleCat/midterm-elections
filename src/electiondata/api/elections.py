@@ -9,7 +9,7 @@ import pandas as pd
 from ..quality.point_in_time import DateLike
 from ..transform import elections as elec_t
 from ..transform import turnout as turnout_t
-from ._common import apply_filters, as_of_filter, load, norm_office, norm_states
+from ._common import apply_filters, as_of_filter, load, norm_office, norm_states, require_office
 
 
 def results(
@@ -88,5 +88,5 @@ def history(
     """Political-history features (previous share, margin, lean, rolling averages) per race."""
     df = as_of_filter(load("election_results"), as_of)
     summary = elec_t.race_summary(df)
-    hist = elec_t.political_history(summary, norm_office(office))
+    hist = elec_t.political_history(summary, require_office(office))
     return apply_filters(hist, state=norm_states(state)).reset_index(drop=True)

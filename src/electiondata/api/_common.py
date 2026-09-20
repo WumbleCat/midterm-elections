@@ -32,6 +32,13 @@ def norm_office(office: str | None) -> str | None:
     return _OFFICE_ALIASES[key]
 
 
+def require_office(office: str) -> str:
+    out = norm_office(office)
+    if out is None:
+        raise ValueError("office is required")
+    return out
+
+
 def norm_states(state: str | Sequence[str] | None) -> list[str] | None:
     if state is None:
         return None
